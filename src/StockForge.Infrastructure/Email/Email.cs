@@ -121,13 +121,14 @@ public static class EmailTemplates
         return (subject, html, text);
     }
 
-    private static (string Subject, string Html, string Text) Build(string subject, string greeting, string body, string action, string link)
+    private static (string Subject, string Html, string Text) Build(string subject, string greeting, string body, string? action, string? link)
     {
+        var hasAction = action is not null && link is not null;
         var html = Layout(
             $"<p style=\"color:#0f172a\">{WebUtility.HtmlEncode(greeting)}</p>" +
             $"<p style=\"color:#334155;line-height:1.5\">{WebUtility.HtmlEncode(body)}</p>" +
-            Button(action, link));
-        return (subject, html, $"{greeting}\n\n{body}\n\n{action}: {link}");
+            (hasAction ? Button(action!, link!) : string.Empty));
+        return (subject, html, hasAction ? $"{greeting}\n\n{body}\n\n{action}: {link}" : $"{greeting}\n\n{body}");
     }
 
     private static string Button(string label, string link) =>
