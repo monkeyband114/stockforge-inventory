@@ -6,11 +6,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using StackExchange.Redis;
 using StockForge.Application;
 using StockForge.Application.Abstractions;
+using StockForge.Application.Billing;
 using StockForge.Application.Identity;
 using StockForge.Infrastructure.Email;
 using StockForge.Infrastructure.Identity;
 using StockForge.Infrastructure.Jobs;
 using StockForge.Infrastructure.Persistence;
+using StockForge.Infrastructure.Pdf;
 using StockForge.Infrastructure.Persistence.Interceptors;
 using StockForge.Infrastructure.Realtime;
 using StockForge.Infrastructure.Seeding;
@@ -124,6 +126,7 @@ public static class DependencyInjection
         });
         services.AddSingleton<OutboxProcessor>();
         services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddSingleton<IInvoicePdfRenderer, InvoicePdfRenderer>();
         services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
         return services;
     }

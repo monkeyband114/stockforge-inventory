@@ -6,6 +6,7 @@ using StockForge.Application.Abstractions;
 using StockForge.Application.Security;
 using StockForge.Domain.Common;
 using StockForge.Domain.Inventory;
+using StockForge.Domain.Sales;
 using StockForge.Infrastructure.Identity;
 using StockForge.Infrastructure.Persistence;
 
@@ -139,6 +140,18 @@ internal sealed class RealtimeDomainEventDispatcher(IRealtimeNotifier notifier, 
                 RealtimeAudience.Warehouse, e.SourceWarehouseId), cancellationToken);
             await notifier.PublishAsync(new RealtimeMessage(TenantOf(e), RealtimeEvents.TransferUpdated, payload,
                 RealtimeAudience.Warehouse, e.DestinationWarehouseId), cancellationToken);
+        }
+
+        foreach (var e in events.OfType<SalesOrderStatusChangedEvent>())
+        {
+            var name = e.Status == SalesOrderStatus.Draft ? RealtimeEvents.OrderCreated : RealtimeEvents.OrderStatusChanged;
+            var payload = new { e.OrderId, e.Number, Status = e.Status.ToString(), e.WarehouseId, e.Total };
+            await notifier.PublishAsync(new RealtimeMessage(TenantOf(e), name, payload, RealtimeAudience.Warehouse, e.WarehouseId), cancellationToken);
+            if (e.Status == SalesOrderStatus.PendingApproval)
+            {
+                await notifier.PublishAsync(new RealtimeMessage(TenantOf(e), name, payload, RealtimeAudience.Permission,
+                    Permission: Permissions.Orders.Approve), cancellationToken);
+            }
         }
 
         foreach (var e in events.OfType<StockAdjustmentStatusChangedEvent>())

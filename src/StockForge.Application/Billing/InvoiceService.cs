@@ -80,6 +80,14 @@ public sealed class RecordPaymentRequestValidator : AbstractValidator<RecordPaym
     }
 }
 
+/// <summary>Everything an invoice document shows. Rendered to PDF by the worker.</summary>
+public sealed record InvoiceDocument(Organization.OrganizationDto Organization, InvoiceDto Invoice);
+
+public interface IInvoicePdfRenderer
+{
+    byte[] Render(InvoiceDocument document);
+}
+
 public sealed record MonthlyFinancePoint(int Year, int Month, decimal Invoiced, decimal Collected);
 
 public sealed record FinanceSummaryDto(
