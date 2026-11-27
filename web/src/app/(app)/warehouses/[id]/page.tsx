@@ -175,6 +175,43 @@ function WarehouseDashboardView() {
             </div>
           )}
 
+          {d?.fulfillmentQueue && hasAnyPermission(P.ordersView, P.ordersFulfill) && (
+            <Card>
+              <CardHeader
+                title="Fulfillment queue"
+                description="Open sales orders at this warehouse by stage"
+                actions={
+                  hasPermission(P.ordersFulfill) ? (
+                    <Link href={`/fulfillment?warehouseId=${id}`} className="text-xs font-medium text-brand-700 hover:text-brand-600">
+                      Open queue →
+                    </Link>
+                  ) : null
+                }
+              />
+              <CardBody>
+                {d.fulfillmentQueue.length === 0 ? (
+                  <p className="text-sm text-slate-500">No open orders waiting at this warehouse.</p>
+                ) : (
+                  <ul className="flex flex-wrap gap-3">
+                    {(["Approved", "Processing", "Picking", "Packed", "PartiallyFulfilled"] as const)
+                      .map((st) => ({ st, count: d.fulfillmentQueue?.find((q) => q.status === st)?.count ?? 0 }))
+                      .map(({ st, count }) => (
+                        <li key={st}>
+                          <Link
+                            href={`/orders?warehouseId=${id}&status=${st}`}
+                            className="flex min-w-32 items-center justify-between gap-4 rounded-md border border-slate-200 px-3 py-2 hover:border-brand-600/40 hover:bg-brand-50/30"
+                          >
+                            <OrderStatusBadge status={st} />
+                            <span className="text-lg font-semibold text-slate-900">{formatInteger(count)}</span>
+                          </Link>
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </CardBody>
+            </Card>
+          )}
+
           <Card>
             <CardHeader
               title="Stock movement"
