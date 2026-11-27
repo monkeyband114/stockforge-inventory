@@ -17,6 +17,7 @@ import { ActiveBadge } from "@/features/common/StatusBadges";
 import { MovementTrendChart, ViewToggle, useChartView } from "@/features/dashboard/Charts";
 import { DaysSelector, LowStockTable } from "@/features/dashboard/LowStockTable";
 import { MovementsTable } from "@/features/inventory/MovementsTable";
+import { OrderStatusBadge } from "@/features/sales/SalesBadges";
 import { warehouseTypeLabel } from "@/features/warehouses/WarehouseFormDialog";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -35,7 +36,7 @@ export default function WarehouseDetailPage() {
 
 function WarehouseDashboardView() {
   const { id } = useParams<{ id: string }>();
-  const { canAccessWarehouse, hasPermission } = useAuth();
+  const { canAccessWarehouse, hasPermission, hasAnyPermission } = useAuth();
   const currency = useCurrency();
   const [days, setDays] = useState(14);
   const [view, setView] = useChartView();
