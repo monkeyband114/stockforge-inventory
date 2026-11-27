@@ -10,6 +10,7 @@ using StockForge.Application.Inventory;
 using StockForge.Application.Jobs;
 using StockForge.Application.Organization;
 using StockForge.Application.Platform;
+using StockForge.Application.Procurement;
 using StockForge.Application.Sales;
 using StockForge.Application.Warehouses;
 
@@ -44,6 +45,9 @@ public static class DependencyInjection
         services.AddScoped<CustomerService>();
         services.AddScoped<SalesOrderService>();
         services.AddScoped<InvoiceService>();
+        services.AddScoped<SupplierService>();
+        services.AddScoped<PurchaseOrderService>();
+        services.AddScoped<SupplierInvoiceService>();
         return services;
     }
 }
