@@ -143,7 +143,8 @@ function OrderDetailView() {
   const s = order.status;
   const operable = canAccessWarehouse(order.warehouseId);
   const fulfill = hasPermission(P.ordersFulfill) && operable;
-  const youCreated = !!user && order.createdByName === fullName(user);
+  // createdByUserId is authoritative when present; the name comparison is only a fallback for older APIs.
+  const youCreated = order.createdByUserId ? order.createdByUserId === user?.id : !!user && order.createdByName === fullName(user);
   const picked = order.lines.some((l) => l.quantityPicked > l.quantityPacked);
   const canReturn = hasPermission(P.ordersReturns) && operable && RETURNABLE.includes(s) && order.lines.some((l) => l.quantityShipped > l.quantityReturned);
   const hasShipments = order.shipments.length > 0;
@@ -164,7 +165,13 @@ function OrderDetailView() {
       <Button key="reject" variant="secondary" icon={<X className="size-4" />} onClick={() => setConfirm("reject")}>
         Reject
       </Button>,
-      <Button key="approve" icon={<Check className="size-4" />} onClick={() => setConfirm("approve")}>
+      <Button
+        key="approve"
+        icon={<Check className="size-4" />}
+        onClick={() => setConfirm("approve")}
+        disabled={youCreated}
+        title={youCreated ? "You created this order; another approver must approve it." : undefined}
+      >
         Approve
       </Button>,
     );

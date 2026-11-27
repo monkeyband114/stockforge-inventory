@@ -252,6 +252,7 @@ interface SettingsState {
   invoiceDueDays: string;
   stockAdjustmentRequiresApproval: boolean;
   lowStockAlertsEnabled: boolean;
+  purchaseApprovalThreshold: string;
 }
 
 function settingsFrom(s: TenantSettings): SettingsState {
@@ -263,6 +264,7 @@ function settingsFrom(s: TenantSettings): SettingsState {
     invoiceDueDays: String(s.invoiceDueDays),
     stockAdjustmentRequiresApproval: s.stockAdjustmentRequiresApproval,
     lowStockAlertsEnabled: s.lowStockAlertsEnabled,
+    purchaseApprovalThreshold: String(s.purchaseApprovalThreshold ?? 5000),
   };
 }
 
@@ -294,11 +296,13 @@ export function OrganizationSettingsForm({ org, canEdit }: { org: Organization; 
     const qty = parseNumber(form.orderApprovalQuantityThreshold);
     const tax = parseNumber(form.defaultTaxRatePercent);
     const due = parseNumber(form.invoiceDueDays);
+    const purchase = parseNumber(form.purchaseApprovalThreshold);
     const next: Record<string, string | undefined> = {
       orderApprovalAmountThreshold: Number.isNaN(amount) || amount < 0 ? "Enter an amount of 0 or more." : undefined,
       orderApprovalQuantityThreshold: Number.isNaN(qty) || qty < 0 ? "Enter a quantity of 0 or more." : undefined,
       defaultTaxRate: Number.isNaN(tax) || tax < 0 || tax > 100 ? "Enter a percentage between 0 and 100." : undefined,
       invoiceDueDays: Number.isNaN(due) || !Number.isInteger(due) || due < 0 || due > 365 ? "Enter whole days between 0 and 365." : undefined,
+      purchaseApprovalThreshold: Number.isNaN(purchase) || purchase < 0 ? "Enter an amount of 0 or more." : undefined,
     };
     setErrors(next);
     if (hasErrors(next)) return;
@@ -311,6 +315,7 @@ export function OrganizationSettingsForm({ org, canEdit }: { org: Organization; 
       invoiceDueDays: due,
       stockAdjustmentRequiresApproval: form.stockAdjustmentRequiresApproval,
       lowStockAlertsEnabled: form.lowStockAlertsEnabled,
+      purchaseApprovalThreshold: purchase,
     };
     setSaving(true);
     setFormError(null);
@@ -407,6 +412,19 @@ export function OrganizationSettingsForm({ org, canEdit }: { org: Organization; 
                 error={errors.invoiceDueDays}
                 disabled={ro}
                 trailing="days"
+              />
+              <Input
+                label="Purchase order approval threshold"
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                value={form.purchaseApprovalThreshold}
+                onChange={setText("purchaseApprovalThreshold")}
+                error={errors.purchaseApprovalThreshold}
+                disabled={ro}
+                trailing={org.baseCurrency}
+                hint="Purchase orders above this total need approval. 0 = every purchase order needs approval."
               />
             </div>
             <Switch

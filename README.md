@@ -72,7 +72,7 @@ docs/                          architecture and reference documentation
 dotnet test --project tests/StockForge.Tests     # Testcontainers PostgreSQL, or set STOCKFORGE_TEST_POSTGRES
 ```
 
-The suite has 89 tests, covering among other things:
+The suite has 95 tests, covering among other things:
 
 * Two tenants cannot access each other's data through the API, EF filters, foreign keys or RLS.
 * Every tenant table has RLS.
@@ -80,6 +80,7 @@ The suite has 89 tests, covering among other things:
 * Concurrent order approvals competing for the same units never overcommit.
 * A failed approval rolls back reservations, the invoice and the invoice number.
 * Retried approvals never reserve or bill twice.
+* Partial goods receipts book stock at purchase cost; supplier bills are three-way matched and never booked twice.
 * Failed multi-line transfers roll back completely.
 * Idempotent retries never double-book.
 * SignalR clients only receive their own organization's events.

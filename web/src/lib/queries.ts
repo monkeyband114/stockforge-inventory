@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { api } from "./api";
 import { useAuth } from "./auth";
 import { P } from "./permissions";
-import type { Category, Customer, Organization, PagedResult, Product, ProductListItem, Unit, Warehouse } from "./types";
+import type { Category, Customer, Organization, PagedResult, Product, ProductListItem, Supplier, Unit, Warehouse } from "./types";
 
 /** Query-key roots. Realtime events invalidate by root (see realtime.tsx). */
 export const qk = {
@@ -39,6 +39,14 @@ export const qk = {
   invoices: (params: object) => ["invoices", "list", params] as const,
   invoice: (id: string) => ["invoices", "detail", id] as const,
   financeSummary: (months: number) => ["finance", months] as const,
+  suppliers: (params: object) => ["suppliers", "list", params] as const,
+  supplier: (id: string) => ["suppliers", "detail", id] as const,
+  supplierProducts: (id: string) => ["suppliers", "products", id] as const,
+  purchaseOrders: (params: object) => ["purchase-orders", "list", params] as const,
+  purchaseOrder: (id: string) => ["purchase-orders", "detail", id] as const,
+  reorderSuggestions: (warehouseId: string) => ["purchase-orders", "suggestions", warehouseId] as const,
+  supplierInvoices: (params: object) => ["supplier-invoices", "list", params] as const,
+  supplierInvoice: (id: string) => ["supplier-invoices", "detail", id] as const,
   platformStats: ["platform", "stats"] as const,
   tenants: (params: object) => ["platform", "tenants", params] as const,
 };
@@ -123,6 +131,18 @@ export function useCustomerSearch(search: string, enabled = true) {
   return useQuery({
     queryKey: qk.customers({ picker: true, ...params }),
     queryFn: ({ signal }) => api.get<PagedResult<Customer>>("/api/customers", params, signal),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+/** Active-supplier search for pickers (name, code or email). */
+export function useSupplierSearch(search: string, enabled = true) {
+  const params = { search: search.trim() || undefined, isActive: true, pageSize: 20 };
+  return useQuery({
+    queryKey: qk.suppliers({ picker: true, ...params }),
+    queryFn: ({ signal }) => api.get<PagedResult<Supplier>>("/api/suppliers", params, signal),
     enabled,
     placeholderData: keepPreviousData,
     staleTime: 30_000,

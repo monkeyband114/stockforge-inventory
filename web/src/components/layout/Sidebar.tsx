@@ -7,15 +7,19 @@ import { cn } from "@/lib/cn";
 import { Logo } from "./Logo";
 import { visibleNav, type NavItem } from "./nav";
 
-function isActive(pathname: string, item: NavItem): boolean {
-  if (item.exact) return pathname === item.href || (item.href === "/products" && /^\/products\/(?!categories)[^/]+$/.test(pathname));
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+const matches = (pathname: string, href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+/** The most specific nav item wins: /purchase-orders/123 → "Purchase orders", /purchase-orders/suggestions → its own item. */
+function isActive(pathname: string, item: NavItem, allHrefs: string[]): boolean {
+  if (!matches(pathname, item.href)) return false;
+  return !allHrefs.some((h) => h.length > item.href.length && matches(pathname, h));
 }
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const groups = visibleNav(user?.permissions ?? [], !!user?.tenant);
+  const allHrefs = groups.flatMap((g) => g.items.map((i) => i.href));
 
   return (
     <div className="flex h-full flex-col bg-navy-900 text-slate-300">
@@ -30,7 +34,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{group.label}</p>
             <ul className="space-y-0.5">
               {group.items.map((item) => {
-                const active = isActive(pathname, item);
+                const active = isActive(pathname, item, allHrefs);
                 const Icon = item.icon;
                 return (
                   <li key={`${group.label}-${item.href}`}>

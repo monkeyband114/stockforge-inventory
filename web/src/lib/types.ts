@@ -255,6 +255,8 @@ export interface TenantSettings {
   invoiceDueDays: number;
   stockAdjustmentRequiresApproval: boolean;
   lowStockAlertsEnabled: boolean;
+  /** Phase 3: purchase orders above this total need approval (0 = every PO). */
+  purchaseApprovalThreshold: number;
 }
 
 export interface Organization {
@@ -725,6 +727,7 @@ export interface ReservationQuery extends PageQuery {
 // ---------- Phase 2: sales, fulfillment, billing ----------
 
 export * from "./types-sales";
+export * from "./types-procurement";
 import type { OrderMetrics, StatusCount } from "./types-sales";
 
 // ---------- Dashboards ----------

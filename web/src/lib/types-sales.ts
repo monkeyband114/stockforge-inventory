@@ -236,6 +236,8 @@ export interface Order {
   shipments: Shipment[];
   returns: SalesReturn[];
   version: number;
+  /** Phase 3 API addition: lets the UI hide Approve for the order's creator. */
+  createdByUserId?: Guid;
 }
 
 export interface FulfillmentQueueItem {

@@ -3,6 +3,7 @@ import {
   Boxes,
   Building2,
   ChartLine,
+  ClipboardList,
   ClipboardCheck,
   Contact,
   Cog,
@@ -16,6 +17,8 @@ import {
   Receipt,
   ServerCog,
   ShoppingCart,
+  Truck,
+  Wallet,
   Tags,
   Users,
   Warehouse,
@@ -70,10 +73,20 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    label: "Procurement",
+    scope: "tenant",
+    items: [
+      { label: "Purchase orders", href: "/purchase-orders", icon: ClipboardList, anyOf: [P.purchasingView], exact: true },
+      { label: "Reorder suggestions", href: "/purchase-orders/suggestions", icon: Truck, anyOf: [P.purchasingCreate] },
+      { label: "Suppliers", href: "/suppliers", icon: Building2, anyOf: [P.suppliersView] },
+    ],
+  },
+  {
     label: "Finance",
     scope: "tenant",
     items: [
       { label: "Invoices", href: "/invoices", icon: Receipt, anyOf: [P.invoicesView] },
+      { label: "Payables", href: "/payables", icon: Wallet, anyOf: [P.payablesView] },
       { label: "Finance overview", href: "/finance", icon: ChartLine, anyOf: [P.financeReports] },
     ],
   },
