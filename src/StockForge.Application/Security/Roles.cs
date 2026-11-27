@@ -95,7 +95,8 @@ public static class RolePermissionDefaults
         [RoleNames.FinanceManager] =
         [
             .. Read,
-            Permissions.Inventory.Valuation, Permissions.Orders.View, Permissions.Orders.Approve,
+            // Finance works across the whole organization: not restricted by warehouse assignments.
+            Permissions.Inventory.ViewAllWarehouses, Permissions.Inventory.Valuation, Permissions.Orders.View, Permissions.Orders.Approve,
             Permissions.Customers.View, Permissions.Finance.ViewInvoices, Permissions.Finance.ManageInvoices,
             Permissions.Finance.RecordPayments, Permissions.Finance.ViewReports,
             Permissions.Procurement.ViewSuppliers, Permissions.Procurement.ViewPurchaseOrders,

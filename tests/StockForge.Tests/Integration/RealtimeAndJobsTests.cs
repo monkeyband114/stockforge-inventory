@@ -107,7 +107,8 @@ public sealed class BackgroundJobTests(ApiFixture fixture)
             jobId = await db.OutboxMessages.Where(m => m.TenantId == tenant.TenantId && m.Type == AlwaysFailingJob.JobType).Select(m => m.Id).SingleAsync();
         }
 
-        await fixture.ProcessOutboxAsync();
+        // Parallel tests share the outbox, so another processor may hold the job for a moment.
+        await fixture.ProcessOutboxUntilAsync(async () => (await LoadAsync(jobId)).Attempts >= 1);
         var afterFirst = await LoadAsync(jobId);
         Assert.Equal((OutboxStatus.Pending, 1), (afterFirst.Status, afterFirst.Attempts));
         Assert.True(afterFirst.NextAttemptAt > DateTimeOffset.UtcNow); // Backed off, not retried immediately.

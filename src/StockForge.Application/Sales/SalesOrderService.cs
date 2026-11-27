@@ -370,7 +370,7 @@ public sealed class SalesOrderService(
 
             var invoice = await db.Invoices.FirstOrDefaultAsync(i => i.SalesOrderId == order.Id, token);
             invoice?.ApplyCredit(salesReturn.CreditAmount, Today(tenant.TimeZone));
-            audit.Record("ReturnReceived", nameof(SalesReturn), salesReturn.Id.ToString(), new { order.Number, number, salesReturn.CreditAmount });
+            audit.Record("ReturnReceived", nameof(SalesReturn), salesReturn.Id.ToString(), new { Order = order.Number, Return = number, salesReturn.CreditAmount });
         }, cancellationToken, requireWarehouseAccess: true);
 
     // ===================== Internals =====================
