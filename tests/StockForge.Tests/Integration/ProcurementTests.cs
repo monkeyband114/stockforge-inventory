@@ -84,6 +84,8 @@ public sealed class ProcurementTests(ApiFixture fixture)
         var po = (await t.Admin.PostAsync<PurchaseOrderDto>("/api/purchase-orders",
             new CreatePurchaseOrderRequest(supplier.Id, t.MainWarehouseId, null, null, [new PurchaseOrderLineRequest(product.Id, 100, 5m)], Submit: true), Key())).Ok();
         Assert.Equal(PurchaseOrderStatus.PendingApproval, po.Status);
+        Assert.Equal(t.AdminAuth.User.Id, po.CreatedByUserId);
+        (await staff.GetAsync<PurchaseOrderDto>($"/api/purchase-orders/{po.Id}")).Ok(); // Receiving staff can see POs due at their warehouse.
 
         Assert.Equal(HttpStatusCode.Forbidden, (await staff.PostAsync<PurchaseOrderDto>($"/api/purchase-orders/{po.Id}/approve", null, Key())).Status);
         Assert.Equal("self_approval", (await t.Admin.PostAsync<PurchaseOrderDto>($"/api/purchase-orders/{po.Id}/approve", null, Key())).Code);

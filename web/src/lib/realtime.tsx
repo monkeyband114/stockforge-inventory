@@ -150,7 +150,8 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       });
 
       conn.on("warehouse.activity", (_e: RealtimeEnvelope<WarehouseActivityPayload>) => {
-        invalidate("movements", "dashboard");
+        // Goods receipts post stock-in movements: keep purchase-order progress current for other viewers too.
+        invalidate("movements", "dashboard", "purchase-orders");
       });
 
       conn.on("transfer.updated", (e: RealtimeEnvelope<TransferUpdatedPayload>) => {

@@ -180,6 +180,8 @@ export interface PurchaseOrder {
   receivedValue: number;
   requiresApproval: boolean;
   createdByName: string | null;
+  /** Creator's user id — used to hide Approve (the server also enforces self_approval). */
+  createdByUserId: Guid;
   createdAt: IsoDateTime;
   submittedAt: IsoDateTime | null;
   approvedByName: string | null;

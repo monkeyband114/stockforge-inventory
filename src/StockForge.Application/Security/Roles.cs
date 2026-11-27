@@ -73,7 +73,9 @@ public static class RolePermissionDefaults
             .. Read,
             Permissions.Inventory.View, Permissions.Inventory.Receive, Permissions.Inventory.Issue,
             Permissions.Inventory.Count, Permissions.Inventory.RequestAdjustment,
-            Permissions.Orders.View, Permissions.Orders.Fulfill, Permissions.Procurement.ReceiveGoods,
+            Permissions.Orders.View, Permissions.Orders.Fulfill,
+            // Receiving staff must see the POs due at their warehouse (scoped by assignment in the service).
+            Permissions.Procurement.ViewPurchaseOrders, Permissions.Procurement.ReceiveGoods,
         ],
 
         [RoleNames.ProcurementOfficer] =

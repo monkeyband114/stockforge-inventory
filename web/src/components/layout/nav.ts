@@ -68,7 +68,7 @@ export const NAV: NavGroup[] = [
     scope: "tenant",
     items: [
       { label: "Orders", href: "/orders", icon: ShoppingCart, anyOf: [P.ordersView] },
-      { label: "Fulfillment queue", href: "/fulfillment", icon: PackageOpen, anyOf: [P.ordersFulfill] },
+      { label: "Fulfillment & receiving", href: "/fulfillment", icon: PackageOpen, anyOf: [P.ordersFulfill, P.purchasingReceive] },
       { label: "Customers", href: "/customers", icon: Contact, anyOf: [P.customersView] },
     ],
   },

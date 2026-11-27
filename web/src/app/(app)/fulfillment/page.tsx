@@ -15,6 +15,7 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/Table";
 import { useToast } from "@/components/ui/Toast";
 import { FilterSelect, QueryBoundary } from "@/features/common/QueryBoundary";
 import { RequirePermission } from "@/features/common/RequirePermission";
+import { IncomingPurchaseOrders } from "@/features/procurement/IncomingPurchaseOrders";
 import { ORDER_STATUS_LABELS, OrderStatusBadge } from "@/features/sales/SalesBadges";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -26,7 +27,7 @@ import type { FulfillmentQueueItem, Order, SalesOrderStatus } from "@/lib/types"
 
 export default function FulfillmentPage() {
   return (
-    <RequirePermission anyOf={[P.ordersFulfill]}>
+    <RequirePermission anyOf={[P.ordersFulfill, P.purchasingReceive]}>
       <Suspense fallback={<PageSpinner />}>
         <FulfillmentView />
       </Suspense>
@@ -63,7 +64,7 @@ const QUICK_LABELS: Record<QuickAction["action"], string> = { process: "Start pr
 
 function FulfillmentView() {
   const params = useSearchParams();
-  const { canAccessWarehouse } = useAuth();
+  const { canAccessWarehouse, hasAnyPermission } = useAuth();
   const toast = useToast();
   const queryClient = useQueryClient();
   const warehouses = useAccessibleWarehouses();
@@ -196,6 +197,11 @@ function FulfillmentView() {
           )}
         </QueryBoundary>
       </Card>
+      {hasAnyPermission(P.purchasingView, P.purchasingReceive) && (
+        <div className="mt-6">
+          <IncomingPurchaseOrders warehouseId={warehouseId || undefined} title="Inbound: purchase orders to receive" />
+        </div>
+      )}
       <ConfirmDialog
         open={!!quick}
         onClose={() => setQuick(null)}

@@ -167,7 +167,8 @@ public sealed record PurchaseOrderDto(
     IReadOnlyList<PurchaseOrderLineDto> Lines,
     IReadOnlyList<GoodsReceiptDto> Receipts,
     IReadOnlyList<SupplierInvoiceSummaryDto> Invoices,
-    uint Version);
+    uint Version,
+    Guid CreatedByUserId);
 
 public sealed record ReorderSuggestionDto(
     Guid ProductId,

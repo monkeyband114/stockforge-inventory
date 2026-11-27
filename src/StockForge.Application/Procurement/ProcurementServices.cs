@@ -236,7 +236,8 @@ public sealed class PurchaseOrderService(
                 names.NameOf(r.ReceivedBy), r.ReceivedAt,
                 r.Lines.Select(l => new GoodsReceiptLineDto(l.PurchaseOrderLineId, l.ProductId, skus.GetValueOrDefault(l.ProductId, ""), l.Quantity, l.UnitCost)).ToList())).ToList(),
             invoices,
-            order.Version);
+            order.Version,
+            order.CreatedByUser);
     }
 
     public async Task<PurchaseOrderDto> CreateAsync(CreatePurchaseOrderRequest request, string? idempotencyKey, CancellationToken cancellationToken)

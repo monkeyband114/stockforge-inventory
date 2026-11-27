@@ -17,6 +17,7 @@ import { ActiveBadge } from "@/features/common/StatusBadges";
 import { MovementTrendChart, ViewToggle, useChartView } from "@/features/dashboard/Charts";
 import { DaysSelector, LowStockTable } from "@/features/dashboard/LowStockTable";
 import { MovementsTable } from "@/features/inventory/MovementsTable";
+import { IncomingPurchaseOrders } from "@/features/procurement/IncomingPurchaseOrders";
 import { OrderStatusBadge } from "@/features/sales/SalesBadges";
 import { warehouseTypeLabel } from "@/features/warehouses/WarehouseFormDialog";
 import { api } from "@/lib/api";
@@ -212,6 +213,8 @@ function WarehouseDashboardView() {
               </CardBody>
             </Card>
           )}
+
+          {hasAnyPermission(P.purchasingView, P.purchasingReceive) && <IncomingPurchaseOrders warehouseId={id} />}
 
           <Card>
             <CardHeader

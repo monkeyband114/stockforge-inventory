@@ -63,6 +63,7 @@ export function homePathFor(user: CurrentUser | null): string {
   }
   if (perms.has(P.ordersView)) return "/orders";
   if (perms.has(P.invoicesView)) return "/invoices";
+  if (perms.has(P.purchasingView)) return "/purchase-orders";
   if (perms.has(P.inventoryView)) return "/inventory";
   if (perms.has(P.productsView)) return "/products";
   return "/account";
