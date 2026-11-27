@@ -18,7 +18,7 @@ public partial class _20261127113250_Procurement : Migration
             precision: 18,
             scale: 2,
             nullable: false,
-            defaultValue: 0m);
+            defaultValue: 5000m); // existing organizations get the documented default
 
         migrationBuilder.CreateTable(
             name: "suppliers",
