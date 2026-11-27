@@ -114,6 +114,14 @@ public sealed class SupplierService(IAppDbContext db, ISequenceGenerator sequenc
                 throw new NotFoundException("Product", request.ProductId);
             }
 
+            if (request.IsPreferred)
+            {
+                // Clear the previous preferred supplier first: a unique index allows one preferred supplier per product.
+                await db.SupplierProducts
+                    .Where(p => p.ProductId == request.ProductId && p.SupplierId != supplierId && p.IsPreferred)
+                    .ExecuteUpdateAsync(s => s.SetProperty(p => p.IsPreferred, false), token);
+            }
+
             var existing = await db.SupplierProducts.FirstOrDefaultAsync(p => p.SupplierId == supplierId && p.ProductId == request.ProductId, token);
             if (existing is null)
             {
@@ -123,17 +131,6 @@ public sealed class SupplierService(IAppDbContext db, ISequenceGenerator sequenc
             else
             {
                 existing.Update(request.SupplierSku, request.UnitCost, request.MinimumOrderQuantity, request.LeadTimeDays, request.IsPreferred);
-            }
-
-            if (request.IsPreferred)
-            {
-                var others = await db.SupplierProducts
-                    .Where(p => p.ProductId == request.ProductId && p.SupplierId != supplierId && p.IsPreferred)
-                    .ToListAsync(token);
-                foreach (var other in others)
-                {
-                    other.Update(other.SupplierSku, other.UnitCost, other.MinimumOrderQuantity, other.LeadTimeDays, isPreferred: false);
-                }
             }
 
             await db.SaveChangesAsync(token);

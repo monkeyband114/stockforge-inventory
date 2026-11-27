@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using StockForge.Application.Abstractions;
 using StockForge.Application.Billing;
 using StockForge.Application.Inventory;
+using StockForge.Application.Procurement;
 using StockForge.Application.Jobs;
 using StockForge.Domain.Platform;
 using StockForge.Domain.Tenancy;
@@ -96,7 +97,11 @@ public sealed class ScheduledJobsWorker(
         await RunOnceAsync("purge-outbox", today.ToString("O"), PurgeOutboxAsync, cancellationToken);
 
         await RunOnceAsync("mark-overdue-invoices", today.ToString("O"), ct =>
-            ForEachTenantAsync(async services => await services.GetRequiredService<InvoiceService>().MarkOverdueAsync(ct), ct), cancellationToken);
+            ForEachTenantAsync(async services =>
+            {
+                await services.GetRequiredService<InvoiceService>().MarkOverdueAsync(ct);
+                await services.GetRequiredService<SupplierInvoiceService>().MarkOverdueAsync(ct);
+            }, ct), cancellationToken);
 
         if (now.Hour >= options.Value.DailySummaryHourUtc)
         {
