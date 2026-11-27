@@ -66,7 +66,7 @@ public sealed class ApiClient(HttpClient http, string? accessToken) : IDisposabl
         {
             try
             {
-                problem = JsonDocument.Parse(text).RootElement.Clone();
+                problem = JsonElement.Parse(text);
             }
             catch (JsonException)
             {
