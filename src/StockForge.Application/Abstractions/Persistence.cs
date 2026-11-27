@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using StockForge.Domain.Billing;
 using StockForge.Domain.Catalog;
 using StockForge.Domain.Inventory;
 using StockForge.Domain.Platform;
+using StockForge.Domain.Sales;
 using StockForge.Domain.Tenancy;
 
 namespace StockForge.Application.Abstractions;
@@ -26,6 +28,12 @@ public interface IAppDbContext
     DbSet<StockReservation> StockReservations { get; }
     DbSet<StockAdjustment> StockAdjustments { get; }
     DbSet<StockTransfer> StockTransfers { get; }
+    DbSet<Customer> Customers { get; }
+    DbSet<SalesOrder> SalesOrders { get; }
+    DbSet<Shipment> Shipments { get; }
+    DbSet<SalesReturn> SalesReturns { get; }
+    DbSet<Invoice> Invoices { get; }
+    DbSet<Payment> Payments { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<OutboxMessage> OutboxMessages { get; }
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
@@ -73,6 +81,8 @@ public static class SequenceNames
     public const string Shipment = "shipment";
     public const string PurchaseOrder = "purchase_order";
     public const string GoodsReceipt = "goods_receipt";
+    public const string Customer = "customer";
+    public const string SalesReturn = "sales_return";
 }
 
 /// <summary>Writes explicit audit entries (logins, approvals, security events) in the current unit of work.</summary>

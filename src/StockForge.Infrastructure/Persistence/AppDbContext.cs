@@ -4,10 +4,12 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StockForge.Application.Abstractions;
+using StockForge.Domain.Billing;
 using StockForge.Domain.Catalog;
 using StockForge.Domain.Common;
 using StockForge.Domain.Inventory;
 using StockForge.Domain.Platform;
+using StockForge.Domain.Sales;
 using StockForge.Domain.Tenancy;
 using StockForge.Infrastructure.Identity;
 
@@ -34,6 +36,12 @@ public sealed class AppDbContext(
     public DbSet<StockReservation> StockReservations => Set<StockReservation>();
     public DbSet<StockAdjustment> StockAdjustments => Set<StockAdjustment>();
     public DbSet<StockTransfer> StockTransfers => Set<StockTransfer>();
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
+    public DbSet<Shipment> Shipments => Set<Shipment>();
+    public DbSet<SalesReturn> SalesReturns => Set<SalesReturn>();
+    public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();

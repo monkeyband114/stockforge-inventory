@@ -3,12 +3,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using StockForge.Application.Abstractions;
 using StockForge.Application.Audit;
+using StockForge.Application.Billing;
 using StockForge.Application.Catalog;
 using StockForge.Application.Dashboard;
 using StockForge.Application.Inventory;
 using StockForge.Application.Jobs;
 using StockForge.Application.Organization;
 using StockForge.Application.Platform;
+using StockForge.Application.Sales;
 using StockForge.Application.Warehouses;
 
 namespace StockForge.Application;
@@ -39,6 +41,9 @@ public static class DependencyInjection
         services.AddScoped<AuditService>();
         services.AddScoped<JobMonitoringService>();
         services.AddScoped<PlatformService>();
+        services.AddScoped<CustomerService>();
+        services.AddScoped<SalesOrderService>();
+        services.AddScoped<InvoiceService>();
         return services;
     }
 }

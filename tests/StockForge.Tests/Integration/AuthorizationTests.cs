@@ -165,4 +165,34 @@ public sealed class AuthorizationTests(ApiFixture fixture)
         (await platform.PostAsync<object>($"/api/platform/tenants/{tenant.TenantId}/suspend", new SuspendTenantRequest("Unpaid"))).Ok();
         Assert.Equal(HttpStatusCode.Unauthorized, (await tenant.Admin.GetAsync<CurrentUserDto>("/api/auth/me")).Status);
     }
+
+    [Fact]
+    public async Task Super_admin_onboards_an_organization_whose_admin_accepts_the_invitation()
+    {
+        using var anonymous = fixture.CreateClient();
+        var super = (await anonymous.PostAsync<API.Controllers.AuthResponse>("/api/auth/login",
+            new LoginRequest("superadmin@tests.local", "SuperAdmin!2026", null))).Ok();
+        using var platform = fixture.CreateClient(super.AccessToken);
+        var adminEmail = $"founder-{Guid.NewGuid():N}@tests.local";
+
+        var created = (await platform.PostAsync<CreatedOrganizationDto>("/api/platform/tenants",
+            new CreateOrganizationRequest("Onboarded Co", adminEmail, "Fiona", "Founder", "GBP", "Europe/London"))).Ok();
+        Assert.True(created.AdminInvited);
+
+        await fixture.ProcessOutboxUntilAsync(() => Task.FromResult(fixture.Emails.LastTo(adminEmail) is not null));
+        var invitation = fixture.Emails.LastTo(adminEmail)!;
+        var token = Uri.UnescapeDataString(TestTenant.TokenPattern().Match(invitation.TextBody!).Groups[1].Value);
+        var accepted = (await anonymous.PostAsync<API.Controllers.AuthResponse>("/api/auth/accept-invitation",
+            new AcceptInvitationRequest(adminEmail, token, TestTenant.Password))).Ok();
+
+        Assert.Equal(created.TenantId, accepted.User.Tenant!.Id);
+        Assert.Contains("OrganizationAdmin", accepted.User.Roles);
+        using var admin = fixture.CreateClient(accepted.AccessToken);
+        var warehouses = (await admin.GetAsync<List<Application.Warehouses.WarehouseDto>>("/api/warehouses")).Ok();
+        Assert.Contains(warehouses, w => w.Code == "MAIN");
+
+        // The invitation link is single-use.
+        var reuse = await anonymous.PostAsync<object>("/api/auth/accept-invitation", new AcceptInvitationRequest(adminEmail, token, TestTenant.Password));
+        Assert.Equal(HttpStatusCode.BadRequest, reuse.Status);
+    }
 }

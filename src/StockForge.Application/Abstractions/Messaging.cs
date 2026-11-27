@@ -72,7 +72,9 @@ public interface IRealtimeNotifier
     Task PublishAsync(RealtimeMessage message, CancellationToken cancellationToken);
 }
 
-public sealed record EmailMessage(string To, string Subject, string HtmlBody, string? TextBody = null);
+public sealed record EmailAttachment(string FileName, string ContentType, byte[] Content);
+
+public sealed record EmailMessage(string To, string Subject, string HtmlBody, string? TextBody = null, IReadOnlyList<EmailAttachment>? Attachments = null);
 
 public interface IEmailSender
 {

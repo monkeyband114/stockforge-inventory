@@ -221,6 +221,25 @@ public sealed class IdempotencyTests(ApiFixture fixture)
     }
 
     [Fact]
+    public async Task Claims_abandoned_by_a_crashed_request_can_be_taken_over()
+    {
+        var tenant = await TestTenant.CreateAsync(fixture);
+        await using var scope = fixture.Factory.Services.CreateAsyncScope();
+        scope.ServiceProvider.GetRequiredService<ScopeContext>().SetSystem(tenant.TenantId, "test");
+        var store = scope.ServiceProvider.GetRequiredService<IdempotencyStore>();
+        var userId = tenant.AdminAuth.User.Id;
+        var key = $"k-{Guid.NewGuid():N}";
+
+        Assert.Equal(IdempotencyClaim.Acquired, (await store.TryClaimAsync(key, userId, "POST", "/x", "hash", default)).Claim);
+        Assert.Equal(IdempotencyClaim.InProgress, (await store.TryClaimAsync(key, userId, "POST", "/x", "hash", default)).Claim);
+
+        using (Infrastructure.AdjustableClock.Use(DateTimeOffset.UtcNow.AddMinutes(10)))
+        {
+            Assert.Equal(IdempotencyClaim.Acquired, (await store.TryClaimAsync(key, userId, "POST", "/x", "hash", default)).Claim);
+        }
+    }
+
+    [Fact]
     public async Task Keys_are_scoped_per_tenant()
     {
         var a = await TestTenant.CreateAsync(fixture);

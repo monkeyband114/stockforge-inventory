@@ -39,7 +39,13 @@ internal sealed class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<Smt
         mime.From.Add(new MailboxAddress(smtp.FromName, smtp.FromAddress));
         mime.To.Add(MailboxAddress.Parse(message.To));
         mime.Subject = message.Subject;
-        mime.Body = new BodyBuilder { HtmlBody = message.HtmlBody, TextBody = message.TextBody }.ToMessageBody();
+        var body = new BodyBuilder { HtmlBody = message.HtmlBody, TextBody = message.TextBody };
+        foreach (var attachment in message.Attachments ?? [])
+        {
+            body.Attachments.Add(attachment.FileName, attachment.Content, ContentType.Parse(attachment.ContentType));
+        }
+
+        mime.Body = body.ToMessageBody();
 
         using var client = new SmtpClient();
         await client.ConnectAsync(smtp.Host, smtp.Port, smtp.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None, cancellationToken);
@@ -75,6 +81,29 @@ public static class EmailTemplates
         $"Hi {name},",
         $"Your StockForge account was added to {organization}. Sign in and switch organization to start working.",
         "Open StockForge", link);
+
+    public static (string Subject, string Html, string Text) OrderConfirmation(string customer, string organization, string orderNumber,
+        string total, IReadOnlyList<(string Label, string Value)> lines) => Build(
+        $"Order {orderNumber} confirmed — {organization}",
+        $"Dear {customer},",
+        $"Thank you for your order {orderNumber} ({total}). Items: " + string.Join("; ", lines.Select(l => $"{l.Value} × {l.Label}")) +
+        ". We will let you know when it ships.",
+        "Contact us", $"mailto:");
+
+    public static (string Subject, string Html, string Text) InvoiceIssued(string customer, string organization, string invoiceNumber,
+        string total, string dueDate) => Build(
+        $"Invoice {invoiceNumber} from {organization}",
+        $"Dear {customer},",
+        $"Please find attached invoice {invoiceNumber} for {total}, due on {dueDate}.",
+        "Questions? Reply to this email", "mailto:");
+
+    public static (string Subject, string Html, string Text) ShipmentDispatched(string customer, string orderNumber, string? carrier,
+        string? tracking, string items) => Build(
+        $"Your order {orderNumber} has shipped",
+        $"Dear {customer},",
+        $"Shipment for order {orderNumber} is on its way ({items})" +
+        (carrier is null ? "." : $" with {carrier}") + (tracking is null ? "." : $", tracking number {tracking}."),
+        "Track your order", "mailto:");
 
     public static (string Subject, string Html, string Text) LowStock(string product, string sku, string warehouse, decimal available, decimal reorderLevel, string link) => Build(
         $"Low stock: {sku} at {warehouse}",

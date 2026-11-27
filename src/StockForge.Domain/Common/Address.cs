@@ -21,4 +21,7 @@ public sealed class Address
     public string? State { get; private set; }
     public string? PostalCode { get; private set; }
     public string Country { get; private set; } = string.Empty;
+
+    /// <summary>A detached copy; owned value objects cannot be shared between two owners.</summary>
+    public Address Copy() => new(Line1, Line2, City, State, PostalCode, Country);
 }

@@ -1,0 +1,91 @@
+import {
+  ArrowLeftRight,
+  Boxes,
+  Building2,
+  ClipboardCheck,
+  Cog,
+  Gauge,
+  History,
+  Landmark,
+  ListChecks,
+  Lock,
+  Package,
+  ServerCog,
+  Tags,
+  Users,
+  Warehouse,
+  type LucideIcon,
+} from "lucide-react";
+import { P } from "@/lib/permissions";
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  /** Visible when the user has ANY of these permissions. */
+  anyOf: string[];
+  /** Exact-match highlighting (otherwise prefix match). */
+  exact?: boolean;
+}
+
+export interface NavGroup {
+  label: string;
+  /** "tenant" groups are hidden when the session has no organization (platform super admins). */
+  scope: "tenant" | "platform" | "any";
+  items: NavItem[];
+}
+
+export const NAV: NavGroup[] = [
+  {
+    label: "Overview",
+    scope: "tenant",
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: Gauge, anyOf: [P.reportsOrganization, P.inventoryAnalytics] },
+      { label: "Warehouses", href: "/warehouses", icon: Warehouse, anyOf: [P.warehousesView] },
+    ],
+  },
+  {
+    label: "Inventory",
+    scope: "tenant",
+    items: [
+      { label: "Stock levels", href: "/inventory", icon: Boxes, anyOf: [P.inventoryView], exact: true },
+      { label: "Movements", href: "/inventory/movements", icon: History, anyOf: [P.inventoryView] },
+      { label: "Adjustments", href: "/inventory/adjustments", icon: ClipboardCheck, anyOf: [P.inventoryView] },
+      { label: "Transfers", href: "/inventory/transfers", icon: ArrowLeftRight, anyOf: [P.inventoryView] },
+      { label: "Reservations", href: "/inventory/reservations", icon: Lock, anyOf: [P.inventoryView] },
+    ],
+  },
+  {
+    label: "Catalog",
+    scope: "tenant",
+    items: [
+      { label: "Products", href: "/products", icon: Package, anyOf: [P.productsView], exact: true },
+      { label: "Catalog settings", href: "/products/categories", icon: Tags, anyOf: [P.productsView] },
+    ],
+  },
+  {
+    label: "Administration",
+    scope: "tenant",
+    items: [
+      { label: "Users & roles", href: "/admin/users", icon: Users, anyOf: [P.usersView] },
+      { label: "Organization", href: "/admin/organization", icon: Building2, anyOf: [P.organizationView] },
+      { label: "Audit log", href: "/admin/audit", icon: ListChecks, anyOf: [P.auditView] },
+      { label: "Background jobs", href: "/admin/jobs", icon: ServerCog, anyOf: [P.jobsView] },
+    ],
+  },
+  {
+    label: "Platform",
+    scope: "platform",
+    items: [
+      { label: "Organizations", href: "/platform", icon: Landmark, anyOf: [P.platformTenants] },
+      { label: "Background jobs", href: "/admin/jobs", icon: Cog, anyOf: [P.platformJobs] },
+    ],
+  },
+];
+
+export function visibleNav(permissions: string[], hasTenant: boolean): NavGroup[] {
+  const set = new Set(permissions);
+  return NAV.filter((g) => (g.scope === "tenant" ? hasTenant : g.scope === "platform" ? !hasTenant : true))
+    .map((g) => ({ ...g, items: g.items.filter((i) => i.anyOf.some((p) => set.has(p))) }))
+    .filter((g) => g.items.length > 0);
+}

@@ -28,6 +28,7 @@ public sealed record IdempotencyLookup(IdempotencyClaim Claim, IdempotencyRecord
 public sealed class IdempotencyStore(AppDbContext db, ITenantContext tenant, TimeProvider clock)
 {
     public static readonly TimeSpan Retention = TimeSpan.FromHours(24);
+    public static readonly TimeSpan AbandonedAfter = TimeSpan.FromMinutes(5);
 
     public async Task<IdempotencyLookup> TryClaimAsync(string key, Guid userId, string method, string path, string requestHash, CancellationToken cancellationToken)
     {
@@ -49,6 +50,19 @@ public sealed class IdempotencyStore(AppDbContext db, ITenantContext tenant, Tim
         if (existing.UserId != userId || existing.RequestHash != requestHash || existing.Method != method || existing.Path != path)
         {
             return new IdempotencyLookup(IdempotencyClaim.Mismatch, existing);
+        }
+
+        // A claim left "in progress" by a crashed process (far older than any request timeout) is taken over
+        // atomically, so the client is not locked out of its own key for the whole retention period.
+        if (existing.Status == IdempotencyStatus.InProgress && existing.CreatedAt < now - AbandonedAfter)
+        {
+            var takenOver = await db.IdempotencyRecords
+                .Where(r => r.Id == existing.Id && r.Status == IdempotencyStatus.InProgress && r.CreatedAt == existing.CreatedAt)
+                .ExecuteUpdateAsync(s => s.SetProperty(r => r.CreatedAt, now), cancellationToken);
+            if (takenOver == 1)
+            {
+                return new IdempotencyLookup(IdempotencyClaim.Acquired, null);
+            }
         }
 
         return new IdempotencyLookup(

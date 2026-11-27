@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using StockForge.Application.Abstractions;
 using StockForge.Application.Common;
 using StockForge.Application.Inventory;
+using StockForge.Domain.Billing;
 using StockForge.Domain.Inventory;
+using StockForge.Domain.Sales;
 
 namespace StockForge.Application.Dashboard;
 
@@ -34,7 +36,24 @@ public sealed record OrganizationDashboardDto(
     IReadOnlyList<TrendPoint> MovementTrend,
     IReadOnlyList<CategoryValuationDto> ValueByCategory,
     IReadOnlyList<WarehouseValuationDto> ValueByWarehouse,
-    IReadOnlyList<LowStockItemDto> LowStockItems);
+    IReadOnlyList<LowStockItemDto> LowStockItems,
+    OrderMetricsDto Orders);
+
+/// <summary>Order and fulfillment KPIs (window: the dashboard's trend days).</summary>
+public sealed record OrderMetricsDto(
+    int TotalOrders,
+    int PendingApproval,
+    int OpenOrders,
+    int ShippedInPeriod,
+    decimal SalesInPeriod,
+    decimal FulfillmentRatePercent,
+    decimal? AverageHoursToShip,
+    IReadOnlyList<MonthlySalesPoint> MonthlySales,
+    IReadOnlyList<StatusCount> ByStatus);
+
+public sealed record MonthlySalesPoint(int Year, int Month, decimal Sales, int Orders);
+
+public sealed record StatusCount(string Status, int Count);
 
 public sealed record WarehouseDashboardDto(
     Guid WarehouseId,
@@ -53,7 +72,8 @@ public sealed record WarehouseDashboardDto(
     int PendingAdjustments,
     IReadOnlyList<TrendPoint> MovementTrend,
     IReadOnlyList<StockMovementDto> RecentMovements,
-    IReadOnlyList<LowStockItemDto> LowStockItems);
+    IReadOnlyList<LowStockItemDto> LowStockItems,
+    IReadOnlyList<StatusCount> FulfillmentQueue);
 
 /// <summary>Raw SQL row for movement trends (explicit column names, independent of naming conventions).</summary>
 public sealed class TrendRow
@@ -110,7 +130,61 @@ public sealed class DashboardService(
             await TrendAsync(null, trendDays, tz, excludeTransfers: true, cancellationToken),
             valuation.Categories,
             valuation.Warehouses,
-            await LowStockAsync(null, 10, cancellationToken));
+            await LowStockAsync(null, 10, cancellationToken),
+            await OrderMetricsAsync(trendDays, cancellationToken));
+    }
+
+    private static readonly SalesOrderStatus[] OpenStatuses =
+    [
+        SalesOrderStatus.Approved, SalesOrderStatus.Processing, SalesOrderStatus.Picking, SalesOrderStatus.Packed,
+        SalesOrderStatus.PartiallyFulfilled,
+    ];
+
+    private async Task<OrderMetricsDto> OrderMetricsAsync(int days, CancellationToken cancellationToken)
+    {
+        var orders = db.SalesOrders.AsNoTracking();
+        if (currentUser.AccessibleWarehouseIds is { } allowed)
+        {
+            var ids = allowed.ToArray();
+            orders = orders.Where(o => ids.Contains(o.WarehouseId));
+        }
+
+        var since = clock.GetUtcNow().AddDays(-days);
+        var approvedInPeriod = orders.Where(o => o.ApprovedAt >= since);
+        var approvedCount = await approvedInPeriod.CountAsync(cancellationToken);
+        var fullyShipped = await approvedInPeriod.CountAsync(o => o.Status == SalesOrderStatus.Shipped ||
+            o.Status == SalesOrderStatus.Delivered || o.Status == SalesOrderStatus.Returned, cancellationToken);
+        var shipTimes = await orders.Where(o => o.ShippedAt >= since && o.ApprovedAt != null)
+            .Select(o => new { o.ApprovedAt, o.ShippedAt })
+            .ToListAsync(cancellationToken);
+
+        var firstMonth = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddMonths(-5);
+        firstMonth = new DateOnly(firstMonth.Year, firstMonth.Month, 1);
+        var sales = await db.Invoices.AsNoTracking()
+            .Where(i => i.Status != InvoiceStatus.Cancelled && i.IssueDate >= firstMonth)
+            .GroupBy(i => new { i.IssueDate.Year, i.IssueDate.Month })
+            .Select(g => new { g.Key.Year, g.Key.Month, Sales = g.Sum(i => i.Total), Orders = g.Count() })
+            .ToListAsync(cancellationToken);
+        var monthly = Enumerable.Range(0, 6).Select(offset => firstMonth.AddMonths(offset)).Select(m =>
+        {
+            var point = sales.FirstOrDefault(s => s.Year == m.Year && s.Month == m.Month);
+            return new MonthlySalesPoint(m.Year, m.Month, point?.Sales ?? 0, point?.Orders ?? 0);
+        }).ToList();
+
+        var byStatus = await orders.GroupBy(o => o.Status).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(cancellationToken);
+        var periodStart = DateOnly.FromDateTime(since.UtcDateTime);
+
+        return new OrderMetricsDto(
+            byStatus.Sum(s => s.Count),
+            byStatus.Where(s => s.Key == SalesOrderStatus.PendingApproval).Sum(s => s.Count),
+            byStatus.Where(s => OpenStatuses.Contains(s.Key)).Sum(s => s.Count),
+            shipTimes.Count,
+            await db.Invoices.AsNoTracking().Where(i => i.Status != InvoiceStatus.Cancelled && i.IssueDate >= periodStart)
+                .SumAsync(i => (decimal?)i.Total, cancellationToken) ?? 0,
+            approvedCount == 0 ? 0 : decimal.Round(100m * fullyShipped / approvedCount, 1),
+            shipTimes.Count == 0 ? null : decimal.Round((decimal)shipTimes.Average(t => (t.ShippedAt!.Value - t.ApprovedAt!.Value).TotalHours), 1),
+            monthly,
+            byStatus.OrderBy(s => s.Key).Select(s => new StatusCount(s.Key.ToString(), s.Count)).ToList());
     }
 
     public async Task<WarehouseDashboardDto> GetWarehouseAsync(Guid warehouseId, int trendDays, CancellationToken cancellationToken)
@@ -162,7 +236,12 @@ public sealed class DashboardService(
             await db.StockAdjustments.CountAsync(a => a.WarehouseId == warehouseId && a.Status == AdjustmentStatus.PendingApproval, cancellationToken),
             await TrendAsync(warehouseId, trendDays, tz, excludeTransfers: false, cancellationToken),
             recent.Items,
-            await LowStockAsync(warehouseId, 10, cancellationToken));
+            await LowStockAsync(warehouseId, 10, cancellationToken),
+            await db.SalesOrders.AsNoTracking()
+                .Where(o => o.WarehouseId == warehouseId && OpenStatuses.Contains(o.Status))
+                .GroupBy(o => o.Status)
+                .Select(g => new StatusCount(g.Key.ToString(), g.Count()))
+                .ToListAsync(cancellationToken));
     }
 
     private async Task<IReadOnlyList<LowStockItemDto>> LowStockAsync(Guid? warehouseId, int take, CancellationToken cancellationToken)
