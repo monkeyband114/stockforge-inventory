@@ -138,7 +138,135 @@ internal sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory, I
         }, ct);
 
         await SeedSalesAsync(ids, ct);
+        await SeedProcurementAsync(ids, ct);
         return ids.Users["inventory@acme.test"];
+    }
+
+    /// <summary>Suppliers with negotiated terms, purchase orders in every state, goods receipts and supplier bills.</summary>
+    private async Task SeedProcurementAsync(SeededTenant ids, CancellationToken ct)
+    {
+        var suppliers = new (string Name, string Contact, string Email, int Terms, int Lead, string[] Products)[]
+        {
+            ("SafeGuard Industrial Supply", "Rachel Moore", "orders@safeguard.test", 30, 5,
+                ["Hi-Vis Safety Vest", "Safety Helmet EN397", "Steel Toe Boots", "Ear Defenders", "First Aid Kit (Workplace)"]),
+            ("PackRight Packaging Co.", "Tom Becker", "sales@packright.test", 45, 7,
+                ["Corrugated Box 40x30x30", "Stretch Wrap Film 500mm", "Packing Tape 48mm x 66m", "Bubble Wrap Roll 1m x 50m", "Pallet Labels (1000)"]),
+            ("CleanPro Distributors", "Aisha Khan", "ar@cleanpro.test", 30, 4,
+                ["Industrial Floor Cleaner 5L", "Nitrile Gloves (Box of 100)", "Microfiber Cloths (10 pack)", "Hand Sanitizer 1L"]),
+            ("OfficeHub Wholesale", "Ben Carter", "trade@officehub.test", 15, 3,
+                ["A4 Copy Paper (500 sheets)", "Ballpoint Pens (Box of 50)", "Lever Arch File", "Sticky Notes 76x76 (12 pack)", "Desk Organizer"]),
+        };
+
+        var supplierIds = new Dictionary<string, Guid>();
+        var start = DateTimeOffset.UtcNow.AddDays(-26);
+        await RunAsAsync(ids, "procurement@acme.test", async services =>
+        {
+            using var _ = AdjustableClock.Use(start);
+            var service = services.GetRequiredService<Application.Procurement.SupplierService>();
+            var db = services.GetRequiredService<IAppDbContext>();
+            foreach (var s in suppliers)
+            {
+                var supplier = await service.CreateAsync(new Application.Procurement.SupplierRequest(s.Name, s.Contact, s.Email, "+1 555 0199",
+                    null, null, s.Terms, s.Lead, null), ct);
+                supplierIds[s.Name] = supplier.Id;
+                foreach (var productName in s.Products)
+                {
+                    var cost = await db.Products.Where(p => p.Id == ids.Products[productName]).Select(p => p.CostPrice).FirstAsync(ct);
+                    await service.UpsertProductAsync(supplier.Id, new Application.Procurement.SupplierProductRequest(
+                        ids.Products[productName], $"{s.Name[..3].ToUpperInvariant()}-{productName.Length:D3}", decimal.Round(cost * 0.97m, 4),
+                        10, s.Lead, IsPreferred: true), ct);
+                }
+            }
+        }, ct);
+
+        // (supplier, product lines, days ago, stage)
+        var plans = new (string Supplier, (string Product, decimal Qty)[] Lines, int DaysAgo, string Stage)[]
+        {
+            ("SafeGuard Industrial Supply", [("Hi-Vis Safety Vest", 200), ("Safety Helmet EN397", 80)], 24, "received-paid"),
+            ("PackRight Packaging Co.", [("Corrugated Box 40x30x30", 1500), ("Packing Tape 48mm x 66m", 300)], 20, "received-billed"),
+            ("CleanPro Distributors", [("Nitrile Gloves (Box of 100)", 240), ("Hand Sanitizer 1L", 120)], 14, "partial"),
+            ("OfficeHub Wholesale", [("A4 Copy Paper (500 sheets)", 400), ("Ballpoint Pens (Box of 50)", 60)], 8, "approved"),
+            ("PackRight Packaging Co.", [("Stretch Wrap Film 500mm", 600), ("Bubble Wrap Roll 1m x 50m", 150)], 3, "pending"),
+            ("SafeGuard Industrial Supply", [("Steel Toe Boots", 30)], 1, "draft"),
+        };
+
+        foreach (var plan in plans)
+        {
+            var day = DateTimeOffset.UtcNow.Date.AddDays(-plan.DaysAgo);
+            var at = (double hours) => new DateTimeOffset(day, TimeSpan.Zero).AddHours(hours);
+            Guid poId = Guid.Empty;
+            await RunAsAsync(ids, "procurement@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(10));
+                var po = await services.GetRequiredService<Application.Procurement.PurchaseOrderService>().CreateAsync(
+                    new Application.Procurement.CreatePurchaseOrderRequest(supplierIds[plan.Supplier], ids.Warehouses["CDC"],
+                        DateOnly.FromDateTime(day.AddDays(7)), null,
+                        plan.Lines.Select(l => new Application.Procurement.PurchaseOrderLineRequest(ids.Products[l.Product], l.Qty)).ToList(),
+                        Submit: plan.Stage != "draft"), null, ct);
+                poId = po.Id;
+            }, ct);
+
+            if (plan.Stage is "draft" or "pending")
+            {
+                continue;
+            }
+
+            await RunAsAsync(ids, "finance@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(14));
+                var orders = services.GetRequiredService<Application.Procurement.PurchaseOrderService>();
+                if ((await orders.GetAsync(poId, ct)).Status == Domain.Procurement.PurchaseOrderStatus.PendingApproval)
+                {
+                    await orders.ApproveAsync(poId, ct);
+                }
+            }, ct);
+
+            if (plan.Stage == "approved")
+            {
+                continue;
+            }
+
+            await RunAsAsync(ids, "whmanager@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(24 * 5 + 9));
+                var orders = services.GetRequiredService<Application.Procurement.PurchaseOrderService>();
+                var po = await orders.GetAsync(poId, ct);
+                var partial = plan.Stage == "partial";
+                await orders.ReceiveAsync(poId, new Application.Procurement.ReceiveGoodsRequest(
+                    po.Lines.Select(l => new Application.Procurement.ReceiveLineRequest(l.Id, partial ? Math.Floor(l.Quantity * 0.6m) : l.Quantity)).ToList(),
+                    $"DN-{plan.DaysAgo:D3}", partial ? "Balance back-ordered by supplier" : null), ct);
+            }, ct);
+
+            if (plan.Stage == "partial")
+            {
+                continue;
+            }
+
+            await RunAsAsync(ids, "finance@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(24 * 6 + 11));
+                var orders = services.GetRequiredService<Application.Procurement.PurchaseOrderService>();
+                var invoices = services.GetRequiredService<Application.Procurement.SupplierInvoiceService>();
+                var po = await orders.GetAsync(poId, ct);
+                var invoiceDate = DateOnly.FromDateTime(day.AddDays(6));
+                var bill = await invoices.CreateAsync(new Application.Procurement.CreateSupplierInvoiceRequest(po.SupplierId, po.Id,
+                    $"{plan.Supplier[..3].ToUpperInvariant()}-INV-{plan.DaysAgo:D4}", invoiceDate,
+                    plan.Stage == "received-billed" ? invoiceDate.AddDays(10) : null, po.Subtotal, po.TaxTotal, null), ct);
+                if (plan.Stage == "received-paid")
+                {
+                    using var __ = AdjustableClock.Use(at(24 * 12));
+                    await invoices.RecordPaymentAsync(bill.Summary.Id, new Application.Billing.RecordPaymentRequest(bill.Summary.Total,
+                        Domain.Billing.PaymentMethod.BankTransfer, "WIRE-0001", null), ct);
+                }
+            }, ct);
+        }
+
+        // What the worker's daily job would have done by now: flag unpaid bills and invoices past their due date.
+        await RunAsAsync(ids, "finance@acme.test", async services =>
+        {
+            await services.GetRequiredService<Application.Procurement.SupplierInvoiceService>().MarkOverdueAsync(ct);
+            await services.GetRequiredService<Application.Billing.InvoiceService>().MarkOverdueAsync(ct);
+        }, ct);
     }
 
     /// <summary>
