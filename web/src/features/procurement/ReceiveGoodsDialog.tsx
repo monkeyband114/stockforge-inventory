@@ -59,7 +59,7 @@ export function ReceiveGoodsDialog({ purchaseOrderId, open, onClose }: { purchas
       submission.reset();
       queryClient.setQueryData(qk.purchaseOrder(result.data.id), result.data);
       for (const root of RECEIPT_ROOTS) void queryClient.invalidateQueries({ queryKey: [root], refetchType: "active" });
-      const grn = result.data.receipts[0];
+      const grn = [...result.data.receipts].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))[0];
       if (result.replayed) toast.info("Delivery already booked", "This receipt was recorded earlier — stock was not added twice.");
       else toast.success(`Goods received${grn ? ` — ${grn.number}` : ""}`, result.data.status === "Received" ? `${result.data.number} is fully received.` : `${result.data.number} is partially received.`);
       onClose();
