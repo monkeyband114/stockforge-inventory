@@ -19,7 +19,7 @@ conventions and endpoints.
   | 403 | `forbidden`, `tenant_violation` |
   | 404 | `not_found` (also returned for other tenants' ids) |
   | 409 | `insufficient_stock` (+ `available`, `requested`), `invalid_state`, `concurrency_conflict`, `duplicate`, `duplicate_sku`, `request_in_progress` |
-  | 422 | `idempotency_key_reused`, domain rules such as `last_admin`, `product_in_use`, `no_variance` |
+  | 422 | `idempotency_key_reused`, domain rules such as `last_admin`, `product_in_use`, `no_variance`, `self_approval`, `over_pick`, `over_return`, `overpayment`, `order_partially_shipped`, `invoice_paid` |
   | 429 | `rate_limited` (+ `Retry-After`) |
 
 * Send `X-Correlation-Id` to trace a request through logs, audit rows and background jobs.
@@ -96,6 +96,34 @@ Permissions in brackets; `a | b` means either permission suffices.
 Stock operations are also limited to the caller's assigned warehouses unless they hold
 `inventory.view_all_warehouses`.
 
+### Customers, orders & fulfillment
+| Method | Path | Permission |
+|---|---|---|
+| GET / POST / PUT | `/api/customers`, `/api/customers/{id}` | customers.view / customers.manage |
+| GET | `/api/orders` (`status`, `customerId`, `warehouseId`, `from`, `to`), `/api/orders/{id}` | orders.view |
+| POST ⟳! | `/api/orders` (`submit: true` to submit immediately) | orders.create |
+| PUT | `/api/orders/{id}` (draft only) | orders.create |
+| POST ⟳! | `/api/orders/{id}/submit` | orders.create |
+| POST ⟳! | `/api/orders/{id}/approve` · POST `/reject` | orders.approve |
+| POST | `/api/orders/{id}/cancel` | orders.cancel |
+| POST | `/api/orders/{id}/process` · `/start-picking` · `/pick` · `/pack` | orders.fulfill (+ warehouse access) |
+| POST ⟳! | `/api/orders/{id}/ship` | orders.fulfill (+ warehouse access) |
+| POST ⟳! | `/api/orders/{id}/returns` | orders.returns (+ warehouse access) |
+| GET / POST | `/api/shipments/{id}` · `/api/shipments/{id}/deliver` | orders.view / orders.fulfill |
+| GET | `/api/fulfillment/queue?warehouseId=` | orders.fulfill \| orders.view |
+
+### Invoices & finance
+| Method | Path | Permission |
+|---|---|---|
+| GET | `/api/invoices` (`status`, `customerId`, `outstandingOnly`, `from`, `to`), `/api/invoices/{id}` | invoices.view |
+| GET | `/api/invoices/{id}/pdf` (`404 pdf_pending` until generated) | invoices.view |
+| POST | `/api/invoices/{id}/regenerate-pdf` | invoices.manage |
+| POST ⟳! | `/api/invoices/{id}/payments` | payments.record |
+| GET | `/api/finance/summary?months=12` | finance.reports |
+
+⟳! = `Idempotency-Key` **required** (`400 idempotency_key_required` without it). Lifecycle rules and error
+codes are in [ORDERS.md](ORDERS.md).
+
 ### Dashboards, audit, jobs, platform
 | Method | Path | Permission |
 |---|---|---|
@@ -124,5 +152,10 @@ them. Every event is delivered as `{ type, tenantId, payload, at }`:
 | `transfer.updated` | transferId, number, status, source/destination warehouse | Both warehouses |
 | `adjustment.updated` | adjustmentId, number, warehouseId, productId, status, quantityChange | Warehouse; approvers when pending |
 | `inventory.low_stock` | warehouseId, productId, sku, name, warehouseName, quantityAvailable, reorderLevel | Warehouse members and all-warehouse viewers |
+| `order.created`, `order.status_changed` | orderId, number, status, warehouseId, total | Fulfillment warehouse; approvers when pending |
+| `shipment.updated` | id, number, salesOrderId, orderNumber, status, trackingNumber | Fulfillment warehouse |
+
+Events published by the worker (`inventory.low_stock`, `shipment.updated`) reach browsers through the Redis
+backplane, so they require `ConnectionStrings:Redis` on both the API and the worker.
 
 Server method: `WhoAmI()` returns the subscribed tenant id (diagnostics).

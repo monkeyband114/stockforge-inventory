@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { api } from "./api";
 import { useAuth } from "./auth";
 import { P } from "./permissions";
-import type { Category, Organization, PagedResult, Product, ProductListItem, Unit, Warehouse } from "./types";
+import type { Category, Customer, Organization, PagedResult, Product, ProductListItem, Unit, Warehouse } from "./types";
 
 /** Query-key roots. Realtime events invalidate by root (see realtime.tsx). */
 export const qk = {
@@ -31,6 +31,14 @@ export const qk = {
   jobs: (params: object) => ["jobs", "list", params] as const,
   jobStats: ["jobs", "stats"] as const,
   sessions: ["sessions"] as const,
+  customers: (params: object) => ["customers", "list", params] as const,
+  customer: (id: string) => ["customers", "detail", id] as const,
+  orders: (params: object) => ["orders", "list", params] as const,
+  order: (id: string) => ["orders", "detail", id] as const,
+  fulfillmentQueue: (warehouseId: string) => ["fulfillment", warehouseId] as const,
+  invoices: (params: object) => ["invoices", "list", params] as const,
+  invoice: (id: string) => ["invoices", "detail", id] as const,
+  financeSummary: (months: number) => ["finance", months] as const,
   platformStats: ["platform", "stats"] as const,
   tenants: (params: object) => ["platform", "tenants", params] as const,
 };
@@ -103,6 +111,18 @@ export function useProductSearch(search: string, enabled = true) {
   return useQuery({
     queryKey: qk.products({ picker: true, ...params }),
     queryFn: ({ signal }) => api.get<PagedResult<ProductListItem>>("/api/products", params, signal),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+/** Active-customer search for pickers (name, code or email). */
+export function useCustomerSearch(search: string, enabled = true) {
+  const params = { search: search.trim() || undefined, isActive: true, pageSize: 20 };
+  return useQuery({
+    queryKey: qk.customers({ picker: true, ...params }),
+    queryFn: ({ signal }) => api.get<PagedResult<Customer>>("/api/customers", params, signal),
     enabled,
     placeholderData: keepPreviousData,
     staleTime: 30_000,

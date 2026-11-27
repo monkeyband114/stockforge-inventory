@@ -722,6 +722,11 @@ export interface ReservationQuery extends PageQuery {
   status?: ReservationStatus;
 }
 
+// ---------- Phase 2: sales, fulfillment, billing ----------
+
+export * from "./types-sales";
+import type { OrderMetrics, StatusCount } from "./types-sales";
+
 // ---------- Dashboards ----------
 
 export interface TrendPoint {
@@ -757,6 +762,8 @@ export interface OrganizationDashboard {
   valueByCategory: CategoryValuation[];
   valueByWarehouse: WarehouseValuation[];
   lowStockItems: LowStockItem[];
+  /** Phase 2 order KPIs (optional so the UI tolerates an older API). */
+  orders?: OrderMetrics;
 }
 
 export interface WarehouseDashboard {
@@ -777,6 +784,8 @@ export interface WarehouseDashboard {
   movementTrend: TrendPoint[];
   recentMovements: StockMovement[];
   lowStockItems: LowStockItem[];
+  /** Phase 2: open orders per fulfillment status at this warehouse. */
+  fulfillmentQueue?: StatusCount[];
 }
 
 // ---------- Audit & jobs ----------

@@ -5,13 +5,16 @@ import type { HubConnection } from "@microsoft/signalr";
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from "react";
 import { API_URL, getAccessToken, getAccessTokenExpiry, refreshSession } from "./api";
 import { useAuth } from "./auth";
-import { formatQty, humanize } from "./format";
+import { formatCurrency, formatQty, humanize } from "./format";
 import { P } from "./permissions";
+import { useCurrency } from "./queries";
 import type {
   AdjustmentUpdatedPayload,
   InventoryUpdatedPayload,
   LowStockPayload,
+  OrderEventPayload,
   RealtimeEnvelope,
+  ShipmentEventPayload,
   TransferUpdatedPayload,
   WarehouseActivityPayload,
 } from "./types";
@@ -69,11 +72,14 @@ const HUB_PATH = "/hubs/notifications";
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const { status, user, sessionEpoch, hasPermission } = useAuth();
+  const currency = useCurrency();
   const queryClient = useQueryClient();
   const [state, setState] = useState<ConnectionState>("offline");
   const [notifications, dispatch] = useReducer(reducer, []);
   const hasPermissionRef = useRef(hasPermission);
   hasPermissionRef.current = hasPermission;
+  const currencyRef = useRef("USD");
+  currencyRef.current = currency;
 
   // Coalesce bursts of events (e.g. a 20-line transfer) into one invalidation per query family.
   const pending = useRef(new Set<string>());
@@ -203,6 +209,52 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
           href: `/inventory?warehouseId=${p.warehouseId}&search=${encodeURIComponent(p.sku)}`,
           at: e.at,
         });
+      });
+
+      const orderRoots = ["orders", "fulfillment", "dashboard", "customers", "invoices", "finance", "inventory", "reservations", "movements"];
+
+      conn.on("order.created", (_e: RealtimeEnvelope<OrderEventPayload>) => {
+        invalidate("orders", "dashboard", "customers");
+      });
+
+      conn.on("order.status_changed", (e: RealtimeEnvelope<OrderEventPayload>) => {
+        invalidate(...orderRoots);
+        const p = e.payload;
+        if (p.status === "PendingApproval") {
+          if (!hasPermissionRef.current(P.ordersApprove)) return;
+          notify({
+            key: `order:${p.orderId}:PendingApproval`,
+            title: `Order ${p.number} awaits approval`,
+            message: `Order total ${formatCurrency(p.total, currencyRef.current)} needs review.`,
+            tone: "warning",
+            href: `/orders/${p.orderId}`,
+            at: e.at,
+          });
+        } else if ((p.status === "Shipped" || p.status === "PartiallyFulfilled") && hasPermissionRef.current(P.ordersView)) {
+          notify({
+            key: `order:${p.orderId}:${p.status}`,
+            title: `Order ${p.number} ${p.status === "Shipped" ? "shipped" : "partially shipped"}`,
+            message: p.status === "Shipped" ? "All items have left the warehouse." : "Part of the order has shipped; the rest is still being fulfilled.",
+            tone: "success",
+            href: `/orders/${p.orderId}`,
+            at: e.at,
+          });
+        }
+      });
+
+      conn.on("shipment.updated", (e: RealtimeEnvelope<ShipmentEventPayload>) => {
+        invalidate("orders", "fulfillment", "dashboard");
+        const p = e.payload;
+        if (p.status === "Delivered" && hasPermissionRef.current(P.ordersView)) {
+          notify({
+            key: `shipment:${p.id}:Delivered`,
+            title: `Shipment ${p.number} delivered`,
+            message: `Order ${p.orderNumber}${p.trackingNumber ? ` · tracking ${p.trackingNumber}` : ""}.`,
+            tone: "success",
+            href: `/orders/${p.salesOrderId}`,
+            at: e.at,
+          });
+        }
       });
 
       conn.onreconnecting(() => {

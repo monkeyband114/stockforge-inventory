@@ -117,6 +117,27 @@ check("refresh rotates the token", s == 200 and rotated["refreshToken"] != first
 s, body, _ = call("POST", "/api/auth/switch-organization", rotated["accessToken"], {"tenantId": next(m["id"] for m in rotated["user"]["memberships"] if m["slug"] == "globex-retail")})
 check("multi-org user can switch organization", s == 200 and body["user"]["tenant"]["slug"] == "globex-retail", s)
 
+# Orders: create + submit (auto-approved), invoice issued, appears in the fulfillment queue.
+status, customers_page, _ = call("GET", "/api/customers?pageSize=1", token)
+check("customers listed", status == 200 and customers_page["totalCount"] > 0, customers_page and customers_page.get("totalCount"))
+order_key = {"Idempotency-Key": f"smoke-order-{uuid.uuid4().hex}"}
+order_request = {"customerId": customers_page["items"][0]["id"], "warehouseId": cdc["id"], "discountPercent": 0,
+                 "lines": [{"productId": product["id"], "quantity": 1}], "submit": True}
+s1, order, _ = call("POST", "/api/orders", token, order_request, order_key)
+s2, replay, h2 = call("POST", "/api/orders", token, order_request, order_key)
+check("order submitted and approved with an invoice", s1 == 201 and order["status"] == "Approved" and order["invoice"] is not None,
+      f"{s1} {order and order.get('status')}")
+check("order creation retry is replayed", s2 == 201 and replay["id"] == order["id"] and h2.get("Idempotent-Replayed") == "true", s2)
+status, _, _ = call("POST", "/api/orders", token, order_request)
+check("order creation without idempotency key rejected", status == 400, status)
+status, queue, _ = call("GET", "/api/fulfillment/queue", token)
+check("approved order is in the fulfillment queue", status == 200 and any(q["orderId"] == order["id"] for q in queue), status)
+status, cancelled, _ = call("POST", f"/api/orders/{order['id']}/cancel", token, {"reason": "smoke test cleanup"})
+check("cancel releases stock and cancels the invoice", status == 200 and cancelled["invoice"]["status"] == "Cancelled", status)
+finance = login("finance@acme.test")
+status, summary, _ = call("GET", "/api/finance/summary", finance["accessToken"])
+check("finance summary", status == 200 and len(summary["monthly"]) == 12, status)
+
 status, _, _ = call("GET", "/openapi/v1.json")
 check("OpenAPI document", status == 200, status)
 

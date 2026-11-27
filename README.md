@@ -8,7 +8,7 @@ application scoping, EF Core query filters, composite tenant foreign keys and Po
 security. Inventory cannot be oversold under concurrency: domain invariants, `xmin` optimistic
 concurrency with transactional retries, and database `CHECK` constraints all guard it.
 
-## What works today (phase 1)
+## What works today (phases 1 and 2)
 
 * **Identity & tenancy:** organization onboarding, JWT access tokens plus rotating refresh tokens with
   reuse detection, sessions and revocation, password reset, invitations, lockout, organization switching,
@@ -21,11 +21,21 @@ concurrency with transactional retries, and database `CHECK` constraints all gua
 * **Platform:** immutable audit log, transactional outbox with retries/dead-lettering and failed-job
   monitoring, scheduled jobs (daily summaries, reservation expiry, cleanup), idempotency keys, real-time
   updates over SignalR (tenant- and warehouse-scoped), rate limiting, structured logging, health checks.
+* **Orders & fulfillment:** customers (terms, credit limits), sales orders with line/order discounts and
+  taxes, configurable approval rules (amount, bulk quantity, approve-all, credit limit) with segregation of
+  duties, and transactional approval: reserve stock, issue the invoice and queue the PDF/emails all at once.
+  Also picking/packing queue, partial shipments, delivery confirmation, returns with restock and credit,
+  cancellation with reservation release, and required idempotency keys on create/submit/approve/ship/
+  returns/payments.
+* **Invoicing & finance:** gap-free invoice numbering, PDF invoices rendered by the worker (QuestPDF) and
+  emailed to customers, payments, outstanding and overdue tracking (daily job), finance summary API, and
+  order KPIs on the dashboard.
 * **Web app:** dashboards, inventory operations, products, warehouses, users and roles, organization
-  settings, audit, jobs, and platform administration, all wired to the API.
+  settings, audit, jobs, and platform administration, all wired to the API. Order, invoice and finance
+  screens are being added.
 
-Orders/fulfillment/invoicing (phase 2), procurement (phase 3) and finance analytics (phase 4) are designed
-in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#9-implementation-roadmap) and come next.
+Procurement (phase 3) and further finance analytics (phase 4) are planned in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#9-implementation-roadmap).
 
 ## Quick start
 
@@ -58,11 +68,14 @@ docs/                          architecture and reference documentation
 dotnet test --project tests/StockForge.Tests     # Testcontainers PostgreSQL, or set STOCKFORGE_TEST_POSTGRES
 ```
 
-The suite has 73 tests, covering among other things:
+The suite has 89 tests, covering among other things:
 
 * Two tenants cannot access each other's data through the API, EF filters, foreign keys or RLS.
 * Every tenant table has RLS.
 * 20 simultaneous orders for limited stock never oversell.
+* Concurrent order approvals competing for the same units never overcommit.
+* A failed approval rolls back reservations, the invoice and the invoice number.
+* Retried approvals never reserve or bill twice.
 * Failed multi-line transfers roll back completely.
 * Idempotent retries never double-book.
 * SignalR clients only receive their own organization's events.
@@ -77,6 +90,7 @@ The suite has 73 tests, covering among other things:
 | [Multi-tenancy](docs/MULTI-TENANCY.md) | The four isolation layers; adding tenant tables safely |
 | [Authentication](docs/AUTHENTICATION.md) | Token model, sign-in, refresh rotation, sessions, RBAC |
 | [Inventory](docs/INVENTORY.md) | Ledger, concurrency guarantees, workflows |
+| [Orders](docs/ORDERS.md) | Order lifecycle, transactional approval, fulfillment, invoicing |
 | [Database](docs/DATABASE.md) | ERD, conventions, table reference, roles |
 | [API](docs/API.md) | Conventions, errors, idempotency, endpoints, realtime events |
 | [Deployment](docs/DEPLOYMENT.md) | Docker, scaling, environment variables, local setup, production checklist |

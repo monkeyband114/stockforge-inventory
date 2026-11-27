@@ -9,6 +9,7 @@ implementation roadmap. Companion documents:
 | [MULTI-TENANCY.md](MULTI-TENANCY.md) | The four tenant-isolation layers and how to add a tenant-owned table safely |
 | [AUTHENTICATION.md](AUTHENTICATION.md) | Login, refresh-token rotation, sessions, RBAC and permissions |
 | [INVENTORY.md](INVENTORY.md) | Stock ledger, concurrency control and the stock operations |
+| [ORDERS.md](ORDERS.md) | Order lifecycle, transactional approval, fulfillment, invoicing (sequence diagrams) |
 | [DATABASE.md](DATABASE.md) | Full ERD and table reference |
 | [API.md](API.md) | Endpoint catalogue (Swagger UI is the live reference) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Docker, environment variables and local development |
@@ -221,7 +222,7 @@ Full detail: [INVENTORY.md](INVENTORY.md).
 
 ---
 
-## 6. Order processing (phase 2, designed now)
+## 6. Order processing (summary; full detail in [ORDERS.md](ORDERS.md))
 
 ```mermaid
 sequenceDiagram
@@ -348,9 +349,9 @@ Each phase ends with: build, migration, tests, API verification and a documentat
 
 | Phase | Scope | Status |
 |---|---|---|
-| **0. Foundation** | Solution, central packages, Docker Compose (PostgreSQL, Redis, Mailpit), CI, Serilog, problem details, OpenAPI, health checks | in progress |
-| **1. Identity, tenancy & inventory** | Identity + JWT + refresh rotation + sessions + password reset + lockout; organization onboarding; users/roles/permissions/warehouse assignment; platform admin; four-layer tenant isolation; warehouses, categories, units, products (SKU generation, barcodes, images); inventory balances, stock in/out, damaged, returned, reservations, adjustments with approval, transfers, valuation, movement history; audit log; outbox + worker skeleton; SignalR hub; frontend shell and these modules; isolation, concurrency and auth tests | in progress |
-| **2. Orders, fulfillment & invoicing** | Customers; sales orders with discounts/taxes; configurable approval thresholds; transactional approve → reserve → invoice; pick/pack/ship; partial fulfillment; returns; idempotency keys; invoice numbering; PDF generation in the worker; order emails | next |
+| **0. Foundation** | Solution, central packages, Docker Compose (PostgreSQL, Redis, Mailpit), CI, Serilog, problem details, OpenAPI, health checks | ✅ done |
+| **1. Identity, tenancy & inventory** | Identity + JWT + refresh rotation + sessions + password reset + lockout; organization onboarding; users/roles/permissions/warehouse assignment; platform admin; four-layer tenant isolation; warehouses, categories, units, products (SKU generation, barcodes, images); inventory balances, stock in/out, damaged, returned, reservations, adjustments with approval, transfers, valuation, movement history; audit log; outbox + worker skeleton; SignalR hub; frontend shell and these modules; isolation, concurrency and auth tests | ✅ done |
+| **2. Orders, fulfillment & invoicing** | Customers; sales orders with discounts/taxes; configurable approval thresholds; transactional approve → reserve → invoice; pick/pack/ship; partial fulfillment; returns; idempotency keys; invoice numbering; PDF generation in the worker; order emails; payments, overdue tracking and finance summary API | ✅ backend done · UI in progress |
 | 3. Procurement | Suppliers, supplier products, purchase orders + approval, goods receipt notes with partial deliveries → stock in, supplier invoices and payments | planned |
-| 4. Finance & analytics | Payments, outstanding balances, overdue job, finance dashboard, monthly performance, exportable reports (CSV), scheduled reports | planned |
+| 4. Finance & analytics | Credit notes and refunds, exportable and scheduled reports, revenue analytics by customer/product (payments, overdue tracking and the finance summary shipped with phase 2) | next |
 | 5. Hardening | Load tests, Hangfire adapter (optional), S3 file storage adapter, OpenTelemetry traces, backup/restore runbook | planned |

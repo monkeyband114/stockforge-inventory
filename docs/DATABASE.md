@@ -5,6 +5,7 @@ migrations in `src/StockForge.Infrastructure/Persistence/Migrations`:
 
 * `InitialSchema` is generated from the model.
 * `SecurityPolicies` is hand-written: runtime role, grants, append-only triggers, RLS and platform functions.
+* `SalesAndBilling` adds customers, orders, shipments, returns, invoices and payments, and ends with `stockforge_apply_tenant_rls()`.
 
 ## Entity-relationship diagram
 
@@ -39,6 +40,21 @@ erDiagram
     warehouses ||--o{ stock_transfers : "source / destination"
     stock_transfers ||--|{ stock_transfer_lines : ""
     products ||--o{ stock_transfer_lines : ""
+
+    tenants ||--o{ customers : ""
+    customers ||--o{ sales_orders : "places"
+    warehouses ||--o{ sales_orders : "fulfils"
+    sales_orders ||--|{ sales_order_lines : ""
+    products ||--o{ sales_order_lines : ""
+    sales_orders ||--o{ shipments : ""
+    shipments ||--|{ shipment_lines : ""
+    sales_order_lines ||--o{ shipment_lines : ""
+    sales_orders ||--o{ sales_returns : ""
+    sales_returns ||--|{ sales_return_lines : ""
+    sales_orders ||--o| invoices : "billed (unique)"
+    customers ||--o{ invoices : ""
+    invoices ||--|{ invoice_lines : ""
+    invoices ||--o{ payments : ""
 
     tenants ||--o{ tenant_sequences : "numbering"
     tenants ||--o{ idempotency_records : ""
@@ -82,8 +98,7 @@ erDiagram
     }
 ```
 
-Phase 2 and 3 tables (customers, sales orders, shipments, invoices, payments, suppliers, purchase orders,
-goods receipts) follow the same conventions and are shown in [ARCHITECTURE.md](ARCHITECTURE.md#7-database-schema).
+Procurement tables (phase 3: suppliers, purchase orders, goods receipts) will follow the same conventions.
 
 ## Conventions
 
@@ -97,7 +112,7 @@ goods receipts) follow the same conventions and are shown in [ARCHITECTURE.md](A
 * **Concurrency.** `xmin` is the row version on tenants, memberships, warehouses, products, inventory items,
   reservations, adjustments and transfers. Update DTOs carry `version` for optimistic UI concurrency.
 * **Numbering.** `tenant_sequences (tenant_id, name, next_value)` is incremented with an atomic upsert inside
-  the business transaction. Formats: `TRF-000001`, `ADJ-000001`, SKU `{CATEGORY}-000001`, internal EAN-13
+  the business transaction. Formats: `SO-000001`, `INV-000001`, `SHP-000001`, `RMA-000001`, `CUS-00001`, `TRF-000001`, `ADJ-000001`, SKU `{CATEGORY}-000001`, internal EAN-13
   barcodes in the GS1 in-store range (prefix 2).
 
 ## Table reference
@@ -120,6 +135,13 @@ goods receipts) follow the same conventions and are shown in [ARCHITECTURE.md](A
 | `stock_reservations` | Holds with partial consumption | `consumed + released <= quantity` |
 | `stock_adjustments` | Counts and corrections, approval state | unique `(tenant_id, number)` |
 | `stock_transfers`, `stock_transfer_lines` | Inter-warehouse transfers | unique number; source ≠ destination; one line per product |
+| `customers` | Billing/shipping addresses, payment terms, credit limit | unique `(tenant_id, code)` |
+| `sales_orders` | Orders, totals, approval and fulfillment timestamps | unique `(tenant_id, number)`, partial unique `(tenant_id, idempotency_key)`; totals ≥ 0 |
+| `sales_order_lines` | Priced lines (snapshotted SKU/name) and pick/pack/ship/return progress | CHECK `returned ≤ shipped ≤ packed ≤ picked ≤ quantity` |
+| `shipments`, `shipment_lines` | Consignments with carrier and tracking | unique number; FK to the order line |
+| `sales_returns`, `sales_return_lines` | Customer returns (restock flag, credit) | unique number |
+| `invoices`, `invoice_lines` | Invoices snapshotted from the order | partial unique `(tenant_id, sales_order_id)` (one per order); CHECK `paid + credited ≤ total`, `due ≥ issue` |
+| `payments` | Payments against invoices | `amount > 0` |
 | `tenant_sequences` | Gap-free document numbering | PK `(tenant_id, name)` |
 | `idempotency_records` | Stored responses for idempotent retries (24 h) | unique `(tenant_id, key)` |
 | `stored_files`, `stored_file_contents` | Product images, generated documents | content FK `(tenant_id, file_id)` |

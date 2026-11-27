@@ -6,7 +6,7 @@
 |---|---|---|
 | Balance | `inventory_items` | One row per (tenant, warehouse, product): `quantity_on_hand`, `quantity_reserved`, `average_unit_cost`; **available = on hand − reserved** |
 | Ledger | `stock_movements` | Immutable. Signed `quantity_delta` (on hand) and `reserved_delta`, resulting balances, unit cost, reference document, user, correlation id |
-| Holds | `stock_reservations` | Stock earmarked for a document (manual hold, transfer, and later sales orders); supports partial consumption |
+| Holds | `stock_reservations` | Stock earmarked for a document (manual hold, transfer, sales order); supports partial consumption |
 | Corrections | `stock_adjustments` | Counts and corrections with an approval workflow |
 | Transfers | `stock_transfers`, `stock_transfer_lines` | Request → dispatch → receive (or cancel) |
 
@@ -19,11 +19,11 @@ cost is divided by the same factor.
 | Type | On hand | Reserved | Produced by |
 |---|---|---|---|
 | `StockIn` | + | | `POST /api/inventory/stock-in` (goods receipt in phase 3) |
-| `StockOut` | − | | `POST /api/inventory/stock-out`; shipping reserved order stock in phase 2 (− / −) |
+| `StockOut` | − | (−) | `POST /api/inventory/stock-out`; shipping an order consumes its reservation (on hand − and reserved −) |
 | `Damaged` | − | | `POST /api/inventory/damaged` (write-off at average cost) |
-| `Returned` | + | | `POST /api/inventory/returns` (customer returns) |
-| `Reservation` | | + | Manual holds, transfer requests (sales orders in phase 2) |
-| `Release` | | − | Releasing or expiring a hold, cancelling a transfer |
+| `Returned` | + | | `POST /api/inventory/returns`, order returns with restock |
+| `Reservation` | | + | Manual holds, transfer requests, order approval |
+| `Release` | | − | Releasing or expiring a hold, cancelling a transfer or an approved order |
 | `TransferOut` | − | − | Dispatching a transfer (consumes its reservation) |
 | `TransferIn` | + | | Receiving a transfer at the destination, at the source's average cost |
 | `Adjustment` | ± | | Applying an approved count or correction |
@@ -113,7 +113,7 @@ today such loss is recorded as an adjustment at the destination.
 ### Reservations
 
 Manual holds (`POST /api/reservations`) may expire. The worker releases expired holds every 15 minutes.
-Reservations owned by a transfer (and by orders in phase 2) can only be released through that document.
+Reservations owned by a transfer or a sales order can only be released through that document.
 
 ### Low-stock alerts
 

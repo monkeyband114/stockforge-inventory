@@ -69,8 +69,9 @@ ASP.NET Core maps `__` to `:` (for example `Jwt__SigningKey` → `Jwt:SigningKey
 | `OpenApi__Enabled` | api | | Expose `/openapi/v1.json` and `/swagger` outside Development |
 | `RateLimiting__AuthPermitsPerMinute` / `RefreshPermitsPerMinute` / `GlobalPermitsPerMinute` | api | | 10 / 60 / 600 |
 | `Smtp__Host`, `Smtp__Port`, `Smtp__UseStartTls`, `Smtp__Username`, `Smtp__Password`, `Smtp__FromAddress`, `Smtp__FromName` | worker (api for none) | ✔ | Outgoing email |
-| `Outbox__BatchSize`, `Outbox__PollInterval`, `Outbox__LockDuration` | worker | | 20 / 00:00:02 / 00:05:00 |
+| `Outbox__BatchSize`, `Outbox__PollInterval`, `Outbox__LockDuration` | worker | | 20 / 00:00:02 / 00:05:00 (jobs: emails, low-stock alerts, daily summaries, invoice PDFs, invoice/order/shipment emails) |
 | `Scheduler__DailySummaryHourUtc` | worker | | Hour after which daily summaries are sent (default 6) |
+| `Auth__AllowInsecureRefreshCookie` | api | | Only for plain-HTTP test environments on hosts other than localhost: allows the refresh cookie without `Secure` (never in production) |
 | `Serilog__MinimumLevel__Default` | all | | Log level (logs are compact JSON on stdout) |
 | `NEXT_PUBLIC_API_URL` | web (build arg) | ✔ | Browser-facing API URL, baked in at build time |
 
@@ -101,7 +102,9 @@ Demo accounts (password `StockForge!2026`):
 | whmanager@acme.test | Acme Distribution | WarehouseManager, CDC |
 | staff@acme.test | Acme Distribution | WarehouseStaff, CDC only |
 | staff.north@acme.test | Acme Distribution | WarehouseStaff, NHB only |
-| procurement@, sales@, finance@, auditor@acme.test | Acme Distribution | matching role |
+| sales@acme.test | Acme Distribution | SalesOfficer: customers, create/submit orders |
+| finance@acme.test | Acme Distribution | FinanceManager: approve orders, payments, finance summary |
+| procurement@, auditor@acme.test | Acme Distribution | matching role |
 | admin@globex.test, staff@globex.test | Globex Retail | OrganizationAdmin / WarehouseStaff (BER) |
 | superadmin@stockforge.local (`SuperAdmin!2026`) | platform | SuperAdmin |
 
@@ -127,4 +130,6 @@ python scripts/smoke_test.py http://localhost:8080   # end-to-end smoke test aga
 * [ ] Real SMTP credentials; SPF/DKIM for the sender domain.
 * [ ] PostgreSQL backups (PITR) and monitoring; the migrator is the only component with DDL rights.
 * [ ] `OpenApi__Enabled=false` unless the API documentation should be public.
+* [ ] Invoice PDFs use QuestPDF under its Community licence (free below USD 1M annual revenue); larger organizations need a commercial licence.
+* [ ] Run at least one worker: invoice PDFs, emails, low-stock alerts, overdue marking and reservation expiry depend on it. Its realtime events (low stock, shipments) need the Redis backplane.
 * [ ] Ship logs (compact JSON on stdout) to your log platform; alert on `Job … failed permanently` and on `/health/ready` failures.
