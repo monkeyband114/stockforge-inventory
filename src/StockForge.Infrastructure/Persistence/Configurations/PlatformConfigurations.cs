@@ -17,7 +17,7 @@ internal sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         b.Property(a => a.EntityId).HasMaxLength(80);
         b.Property(a => a.OldValues).HasColumnType("jsonb");
         b.Property(a => a.NewValues).HasColumnType("jsonb");
-        b.Property(a => a.ChangedProperties).HasColumnType("text[]");
+        b.PrimitiveCollection(a => a.ChangedProperties).HasColumnType("text[]");
         b.Property(a => a.IpAddress).HasMaxLength(64);
         b.Property(a => a.UserAgent).HasMaxLength(512);
         b.Property(a => a.CorrelationId).HasMaxLength(64);

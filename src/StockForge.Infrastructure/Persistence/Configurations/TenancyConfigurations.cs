@@ -45,8 +45,8 @@ internal sealed class TenantMembershipConfiguration : IEntityTypeConfiguration<T
         b.HasIndex(m => new { m.TenantId, m.UserId }).IsUnique();
         b.HasIndex(m => m.UserId);
         b.Property(m => m.JobTitle).HasMaxLength(120);
-        b.Property(m => m.Roles).HasColumnType("text[]");
-        b.Property(m => m.GrantedPermissions).HasColumnType("text[]");
+        b.PrimitiveCollection(m => m.Roles).HasColumnType("text[]");
+        b.PrimitiveCollection(m => m.GrantedPermissions).HasColumnType("text[]");
         b.Property(m => m.Version).IsRowVersion();
         b.HasOne<ApplicationUser>().WithMany().HasForeignKey(m => m.UserId).OnDelete(DeleteBehavior.Cascade);
         b.HasMany(m => m.WarehouseAssignments)

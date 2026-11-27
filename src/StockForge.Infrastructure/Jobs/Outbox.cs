@@ -109,7 +109,7 @@ public sealed class OutboxProcessor(
     TimeProvider clock,
     ILogger<OutboxProcessor> logger)
 {
-    private readonly string _instanceId = $"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}"[..60];
+    private readonly string _instanceId = Truncate($"{Environment.MachineName}:{Environment.ProcessId}:{Guid.NewGuid():N}", 100);
 
     /// <summary>Processes one batch; returns the number of jobs handled.</summary>
     public async Task<int> ProcessBatchAsync(CancellationToken cancellationToken)
@@ -195,6 +195,8 @@ public sealed class OutboxProcessor(
 
         await db.SaveChangesAsync(CancellationToken.None);
     }
+
+    private static string Truncate(string value, int maxLength) => value.Length <= maxLength ? value : value[..maxLength];
 
     /// <summary>Exponential back-off (10 s, 20 s, 40 s, …) with ±20% jitter, capped.</summary>
     internal TimeSpan RetryDelay(int attempt)
