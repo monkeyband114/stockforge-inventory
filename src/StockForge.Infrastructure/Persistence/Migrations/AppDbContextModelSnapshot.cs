@@ -17,7 +17,7 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
     // If you encounter a merge conflict in the line below, it means you need to
     // discard one of the migration branches and recreate its migrations on top of
     // the other branch. See https://aka.ms/efcore-docs-migrations-conflicts for more info.
-    public override string LastMigrationId => "20261127101717_SalesAndBilling";
+    public override string LastMigrationId => "20261127113250_Procurement";
 
     protected override void BuildModel(ModelBuilder modelBuilder)
     {
@@ -1901,6 +1901,783 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("tenant_sequences");
             });
 
+        modelBuilder.Entity("StockForge.Domain.Procurement.GoodsReceipt", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<string>("DeliveryNote")
+                    .HasMaxLength(64)
+                    .HasColumnType("character varying(64)")
+                    .HasColumnName("delivery_note");
+
+                b.Property<string>("Notes")
+                    .HasMaxLength(1000)
+                    .HasColumnType("character varying(1000)")
+                    .HasColumnName("notes");
+
+                b.Property<string>("Number")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("character varying(32)")
+                    .HasColumnName("number");
+
+                b.Property<Guid>("PurchaseOrderId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("purchase_order_id");
+
+                b.Property<DateTimeOffset>("ReceivedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("received_at");
+
+                b.Property<Guid>("ReceivedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("received_by");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.Property<Guid>("WarehouseId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("warehouse_id");
+
+                b.HasKey("Id")
+                    .HasName("pk_goods_receipts");
+
+                b.HasAlternateKey("TenantId", "Id")
+                    .HasName("ak_goods_receipts_tenant_id_id");
+
+                b.HasIndex("TenantId", "Number")
+                    .IsUnique()
+                    .HasDatabaseName("ix_goods_receipts_tenant_id_number");
+
+                b.HasIndex("TenantId", "PurchaseOrderId")
+                    .HasDatabaseName("ix_goods_receipts_tenant_id_purchase_order_id");
+
+                b.HasIndex("TenantId", "WarehouseId")
+                    .HasDatabaseName("ix_goods_receipts_tenant_id_warehouse_id");
+
+                b.ToTable("goods_receipts");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.GoodsReceiptLine", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<Guid>("GoodsReceiptId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("goods_receipt_id");
+
+                b.Property<Guid>("ProductId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("product_id");
+
+                b.Property<Guid>("PurchaseOrderLineId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("purchase_order_line_id");
+
+                b.Property<decimal>("Quantity")
+                    .HasPrecision(18, 3)
+                    .HasColumnType("numeric(18,3)")
+                    .HasColumnName("quantity");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<decimal>("UnitCost")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)")
+                    .HasColumnName("unit_cost");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.HasKey("Id")
+                    .HasName("pk_goods_receipt_lines");
+
+                b.HasIndex("TenantId", "GoodsReceiptId")
+                    .HasDatabaseName("ix_goods_receipt_lines_tenant_id_goods_receipt_id");
+
+                b.HasIndex("TenantId", "ProductId")
+                    .HasDatabaseName("ix_goods_receipt_lines_tenant_id_product_id");
+
+                b.HasIndex("TenantId", "PurchaseOrderLineId")
+                    .HasDatabaseName("ix_goods_receipt_lines_tenant_id_purchase_order_line_id");
+
+                b.ToTable("goods_receipt_lines", t =>
+                    {
+                        t.HasCheckConstraint("ck_grn_lines_quantity_positive", "quantity > 0 AND unit_cost >= 0");
+                    });
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.PurchaseOrder", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<DateTimeOffset?>("ApprovedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("approved_at");
+
+                b.Property<Guid?>("ApprovedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("approved_by");
+
+                b.Property<DateTimeOffset?>("CancelledAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("cancelled_at");
+
+                b.Property<DateTimeOffset?>("ClosedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("closed_at");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<Guid>("CreatedByUser")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by_user");
+
+                b.Property<string>("Currency")
+                    .IsRequired()
+                    .HasMaxLength(3)
+                    .HasColumnType("character(3)")
+                    .HasColumnName("currency")
+                    .IsFixedLength();
+
+                b.Property<DateOnly?>("ExpectedDate")
+                    .HasColumnType("date")
+                    .HasColumnName("expected_date");
+
+                b.Property<string>("IdempotencyKey")
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)")
+                    .HasColumnName("idempotency_key");
+
+                b.Property<string>("Notes")
+                    .HasMaxLength(2000)
+                    .HasColumnType("character varying(2000)")
+                    .HasColumnName("notes");
+
+                b.Property<string>("Number")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("character varying(32)")
+                    .HasColumnName("number");
+
+                b.Property<DateOnly>("OrderDate")
+                    .HasColumnType("date")
+                    .HasColumnName("order_date");
+
+                b.Property<DateTimeOffset?>("RejectedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("rejected_at");
+
+                b.Property<string>("RejectionReason")
+                    .HasMaxLength(1000)
+                    .HasColumnType("character varying(1000)")
+                    .HasColumnName("rejection_reason");
+
+                b.Property<bool>("RequiresApproval")
+                    .HasColumnType("boolean")
+                    .HasColumnName("requires_approval");
+
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(40)
+                    .HasColumnType("character varying(40)")
+                    .HasColumnName("status");
+
+                b.Property<DateTimeOffset?>("SubmittedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("submitted_at");
+
+                b.Property<decimal>("Subtotal")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("subtotal");
+
+                b.Property<Guid>("SupplierId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("supplier_id");
+
+                b.Property<decimal>("TaxTotal")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("tax_total");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<decimal>("Total")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("total");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.Property<uint>("Version")
+                    .IsConcurrencyToken()
+                    .ValueGeneratedOnAddOrUpdate()
+                    .HasColumnType("xid")
+                    .HasColumnName("xmin");
+
+                b.Property<Guid>("WarehouseId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("warehouse_id");
+
+                b.HasKey("Id")
+                    .HasName("pk_purchase_orders");
+
+                b.HasAlternateKey("TenantId", "Id")
+                    .HasName("ak_purchase_orders_tenant_id_id");
+
+                b.HasIndex("TenantId", "IdempotencyKey")
+                    .IsUnique()
+                    .HasDatabaseName("ix_purchase_orders_tenant_id_idempotency_key")
+                    .HasFilter("idempotency_key IS NOT NULL");
+
+                b.HasIndex("TenantId", "Number")
+                    .IsUnique()
+                    .HasDatabaseName("ix_purchase_orders_tenant_id_number");
+
+                b.HasIndex("TenantId", "SupplierId")
+                    .HasDatabaseName("ix_purchase_orders_tenant_id_supplier_id");
+
+                b.HasIndex("TenantId", "Status", "CreatedAt")
+                    .HasDatabaseName("ix_purchase_orders_tenant_id_status_created_at");
+
+                b.HasIndex("TenantId", "WarehouseId", "Status")
+                    .HasDatabaseName("ix_purchase_orders_tenant_id_warehouse_id_status");
+
+                b.ToTable("purchase_orders", t =>
+                    {
+                        t.HasCheckConstraint("ck_purchase_orders_totals", "subtotal >= 0 AND tax_total >= 0 AND total >= 0");
+                    });
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.PurchaseOrderLine", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<int>("LineNumber")
+                    .HasColumnType("integer")
+                    .HasColumnName("line_number");
+
+                b.Property<Guid>("ProductId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("product_id");
+
+                b.Property<string>("ProductName")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("character varying(200)")
+                    .HasColumnName("product_name");
+
+                b.Property<Guid>("PurchaseOrderId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("purchase_order_id");
+
+                b.Property<decimal>("Quantity")
+                    .HasPrecision(18, 3)
+                    .HasColumnType("numeric(18,3)")
+                    .HasColumnName("quantity");
+
+                b.Property<decimal>("QuantityReceived")
+                    .HasPrecision(18, 3)
+                    .HasColumnType("numeric(18,3)")
+                    .HasColumnName("quantity_received");
+
+                b.Property<string>("Sku")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .HasColumnType("character varying(64)")
+                    .HasColumnName("sku");
+
+                b.Property<decimal>("Subtotal")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("subtotal");
+
+                b.Property<decimal>("TaxAmount")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("tax_amount");
+
+                b.Property<decimal>("TaxRate")
+                    .HasPrecision(6, 5)
+                    .HasColumnType("numeric(6,5)")
+                    .HasColumnName("tax_rate");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<decimal>("Total")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("total");
+
+                b.Property<decimal>("UnitCost")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)")
+                    .HasColumnName("unit_cost");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.HasKey("Id")
+                    .HasName("pk_purchase_order_lines");
+
+                b.HasAlternateKey("TenantId", "Id")
+                    .HasName("ak_purchase_order_line_tenant_id_id");
+
+                b.HasIndex("TenantId", "ProductId")
+                    .HasDatabaseName("ix_purchase_order_lines_tenant_id_product_id");
+
+                b.HasIndex("TenantId", "PurchaseOrderId", "ProductId")
+                    .IsUnique()
+                    .HasDatabaseName("ix_purchase_order_lines_tenant_id_purchase_order_id_product_id");
+
+                b.ToTable("purchase_order_lines", t =>
+                    {
+                        t.HasCheckConstraint("ck_po_lines_quantities", "quantity > 0 AND quantity_received >= 0 AND quantity_received <= quantity");
+                    });
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.Supplier", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<string>("Code")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("character varying(32)")
+                    .HasColumnName("code");
+
+                b.Property<string>("ContactName")
+                    .HasMaxLength(120)
+                    .HasColumnType("character varying(120)")
+                    .HasColumnName("contact_name");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<string>("Email")
+                    .HasMaxLength(256)
+                    .HasColumnType("character varying(256)")
+                    .HasColumnName("email");
+
+                b.Property<bool>("IsActive")
+                    .HasColumnType("boolean")
+                    .HasColumnName("is_active");
+
+                b.Property<int?>("LeadTimeDays")
+                    .HasColumnType("integer")
+                    .HasColumnName("lead_time_days");
+
+                b.Property<string>("Name")
+                    .IsRequired()
+                    .HasMaxLength(200)
+                    .HasColumnType("character varying(200)")
+                    .HasColumnName("name");
+
+                b.Property<string>("Notes")
+                    .HasMaxLength(2000)
+                    .HasColumnType("character varying(2000)")
+                    .HasColumnName("notes");
+
+                b.Property<int?>("PaymentTermsDays")
+                    .HasColumnType("integer")
+                    .HasColumnName("payment_terms_days");
+
+                b.Property<string>("Phone")
+                    .HasMaxLength(40)
+                    .HasColumnType("character varying(40)")
+                    .HasColumnName("phone");
+
+                b.Property<string>("TaxNumber")
+                    .HasMaxLength(64)
+                    .HasColumnType("character varying(64)")
+                    .HasColumnName("tax_number");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.Property<uint>("Version")
+                    .IsConcurrencyToken()
+                    .ValueGeneratedOnAddOrUpdate()
+                    .HasColumnType("xid")
+                    .HasColumnName("xmin");
+
+                b.HasKey("Id")
+                    .HasName("pk_suppliers");
+
+                b.HasAlternateKey("TenantId", "Id")
+                    .HasName("ak_suppliers_tenant_id_id");
+
+                b.HasIndex("TenantId", "Code")
+                    .IsUnique()
+                    .HasDatabaseName("ix_suppliers_tenant_id_code");
+
+                b.HasIndex("TenantId", "Name")
+                    .HasDatabaseName("ix_suppliers_tenant_id_name");
+
+                b.ToTable("suppliers");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierInvoice", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<decimal>("AmountPaid")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("amount_paid");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<string>("Currency")
+                    .IsRequired()
+                    .HasMaxLength(3)
+                    .HasColumnType("character(3)")
+                    .HasColumnName("currency")
+                    .IsFixedLength();
+
+                b.Property<DateOnly>("DueDate")
+                    .HasColumnType("date")
+                    .HasColumnName("due_date");
+
+                b.Property<DateOnly>("InvoiceDate")
+                    .HasColumnType("date")
+                    .HasColumnName("invoice_date");
+
+                b.Property<bool>("MatchesReceipts")
+                    .HasColumnType("boolean")
+                    .HasColumnName("matches_receipts");
+
+                b.Property<string>("Notes")
+                    .HasMaxLength(1000)
+                    .HasColumnType("character varying(1000)")
+                    .HasColumnName("notes");
+
+                b.Property<Guid?>("PurchaseOrderId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("purchase_order_id");
+
+                b.Property<string>("Reference")
+                    .IsRequired()
+                    .HasMaxLength(32)
+                    .HasColumnType("character varying(32)")
+                    .HasColumnName("reference");
+
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(40)
+                    .HasColumnType("character varying(40)")
+                    .HasColumnName("status");
+
+                b.Property<decimal>("Subtotal")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("subtotal");
+
+                b.Property<Guid>("SupplierId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("supplier_id");
+
+                b.Property<string>("SupplierInvoiceNumber")
+                    .IsRequired()
+                    .HasMaxLength(64)
+                    .HasColumnType("character varying(64)")
+                    .HasColumnName("supplier_invoice_number");
+
+                b.Property<decimal>("TaxTotal")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("tax_total");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<decimal>("Total")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("total");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.Property<uint>("Version")
+                    .IsConcurrencyToken()
+                    .ValueGeneratedOnAddOrUpdate()
+                    .HasColumnType("xid")
+                    .HasColumnName("xmin");
+
+                b.HasKey("Id")
+                    .HasName("pk_supplier_invoices");
+
+                b.HasAlternateKey("TenantId", "Id")
+                    .HasName("ak_supplier_invoices_tenant_id_id");
+
+                b.HasIndex("TenantId", "PurchaseOrderId")
+                    .HasDatabaseName("ix_supplier_invoices_tenant_id_purchase_order_id");
+
+                b.HasIndex("TenantId", "Reference")
+                    .IsUnique()
+                    .HasDatabaseName("ix_supplier_invoices_tenant_id_reference");
+
+                b.HasIndex("TenantId", "Status", "DueDate")
+                    .HasDatabaseName("ix_supplier_invoices_tenant_id_status_due_date");
+
+                b.HasIndex("TenantId", "SupplierId", "SupplierInvoiceNumber")
+                    .IsUnique()
+                    .HasDatabaseName("ix_supplier_invoices_tenant_id_supplier_id_supplier_invoice_nu");
+
+                b.ToTable("supplier_invoices", t =>
+                    {
+                        t.HasCheckConstraint("ck_supplier_invoices_amounts", "total >= 0 AND amount_paid >= 0 AND amount_paid <= total");
+
+                        t.HasCheckConstraint("ck_supplier_invoices_dates", "due_date >= invoice_date");
+                    });
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierPayment", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<decimal>("Amount")
+                    .HasPrecision(18, 2)
+                    .HasColumnType("numeric(18,2)")
+                    .HasColumnName("amount");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<string>("Method")
+                    .IsRequired()
+                    .HasMaxLength(40)
+                    .HasColumnType("character varying(40)")
+                    .HasColumnName("method");
+
+                b.Property<DateTimeOffset>("PaidAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("paid_at");
+
+                b.Property<Guid>("RecordedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("recorded_by");
+
+                b.Property<string>("Reference")
+                    .HasMaxLength(100)
+                    .HasColumnType("character varying(100)")
+                    .HasColumnName("reference");
+
+                b.Property<Guid>("SupplierInvoiceId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("supplier_invoice_id");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.HasKey("Id")
+                    .HasName("pk_supplier_payments");
+
+                b.HasIndex("TenantId", "PaidAt")
+                    .HasDatabaseName("ix_supplier_payments_tenant_id_paid_at");
+
+                b.HasIndex("TenantId", "SupplierInvoiceId")
+                    .HasDatabaseName("ix_supplier_payments_tenant_id_supplier_invoice_id");
+
+                b.ToTable("supplier_payments", t =>
+                    {
+                        t.HasCheckConstraint("ck_supplier_payments_amount_positive", "amount > 0");
+                    });
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierProduct", b =>
+            {
+                b.Property<Guid>("Id")
+                    .HasColumnType("uuid")
+                    .HasColumnName("id");
+
+                b.Property<DateTimeOffset>("CreatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("created_at");
+
+                b.Property<Guid?>("CreatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("created_by");
+
+                b.Property<bool>("IsPreferred")
+                    .HasColumnType("boolean")
+                    .HasColumnName("is_preferred");
+
+                b.Property<int?>("LeadTimeDays")
+                    .HasColumnType("integer")
+                    .HasColumnName("lead_time_days");
+
+                b.Property<decimal>("MinimumOrderQuantity")
+                    .HasPrecision(18, 3)
+                    .HasColumnType("numeric(18,3)")
+                    .HasColumnName("minimum_order_quantity");
+
+                b.Property<Guid>("ProductId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("product_id");
+
+                b.Property<Guid>("SupplierId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("supplier_id");
+
+                b.Property<string>("SupplierSku")
+                    .HasMaxLength(64)
+                    .HasColumnType("character varying(64)")
+                    .HasColumnName("supplier_sku");
+
+                b.Property<Guid>("TenantId")
+                    .HasColumnType("uuid")
+                    .HasColumnName("tenant_id");
+
+                b.Property<decimal>("UnitCost")
+                    .HasPrecision(18, 4)
+                    .HasColumnType("numeric(18,4)")
+                    .HasColumnName("unit_cost");
+
+                b.Property<DateTimeOffset?>("UpdatedAt")
+                    .HasColumnType("timestamp with time zone")
+                    .HasColumnName("updated_at");
+
+                b.Property<Guid?>("UpdatedBy")
+                    .HasColumnType("uuid")
+                    .HasColumnName("updated_by");
+
+                b.HasKey("Id")
+                    .HasName("pk_supplier_products");
+
+                b.HasIndex("TenantId", "ProductId")
+                    .IsUnique()
+                    .HasDatabaseName("ix_supplier_products_tenant_id_product_id")
+                    .HasFilter("is_preferred");
+
+                b.HasIndex("TenantId", "SupplierId", "ProductId")
+                    .IsUnique()
+                    .HasDatabaseName("ix_supplier_products_tenant_id_supplier_id_product_id");
+
+                b.ToTable("supplier_products", t =>
+                    {
+                        t.HasCheckConstraint("ck_supplier_products_non_negative", "unit_cost >= 0 AND minimum_order_quantity >= 0");
+                    });
+            });
+
         modelBuilder.Entity("StockForge.Domain.Sales.Customer", b =>
             {
                 b.Property<Guid>("Id")
@@ -3640,6 +4417,247 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                     .HasConstraintName("fk_tenant_sequences_tenants_tenant_id");
             });
 
+        modelBuilder.Entity("StockForge.Domain.Procurement.GoodsReceipt", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipts_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Procurement.PurchaseOrder", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "PurchaseOrderId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipts_purchase_orders_tenant_id_purchase_order_id");
+
+                b.HasOne("StockForge.Domain.Inventory.Warehouse", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "WarehouseId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipts_warehouses_tenant_id_warehouse_id");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.GoodsReceiptLine", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipt_lines_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Procurement.GoodsReceipt", null)
+                    .WithMany("Lines")
+                    .HasForeignKey("TenantId", "GoodsReceiptId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipt_lines_goods_receipts_tenant_id_goods_receipt_");
+
+                b.HasOne("StockForge.Domain.Catalog.Product", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "ProductId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipt_lines_products_tenant_id_product_id");
+
+                b.HasOne("StockForge.Domain.Procurement.PurchaseOrderLine", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "PurchaseOrderLineId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_goods_receipt_lines_purchase_order_line_tenant_id_purchase_");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.PurchaseOrder", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_purchase_orders_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Procurement.Supplier", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "SupplierId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_purchase_orders_suppliers_tenant_id_supplier_id");
+
+                b.HasOne("StockForge.Domain.Inventory.Warehouse", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "WarehouseId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_purchase_orders_warehouses_tenant_id_warehouse_id");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.PurchaseOrderLine", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_purchase_order_lines_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Catalog.Product", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "ProductId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_purchase_order_lines_products_tenant_id_product_id");
+
+                b.HasOne("StockForge.Domain.Procurement.PurchaseOrder", null)
+                    .WithMany("Lines")
+                    .HasForeignKey("TenantId", "PurchaseOrderId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired()
+                    .HasConstraintName("fk_purchase_order_lines_purchase_orders_tenant_id_purchase_ord");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.Supplier", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_suppliers_tenants_tenant_id");
+
+                b.OwnsOne("StockForge.Domain.Common.Address", "Address", b1 =>
+                    {
+                        b1.Property<Guid>("SupplierId")
+                            .HasColumnType("uuid")
+                            .HasColumnName("id");
+
+                        b1.Property<string>("City")
+                            .IsRequired()
+                            .HasMaxLength(100)
+                            .HasColumnType("character varying(100)")
+                            .HasColumnName("address_city");
+
+                        b1.Property<string>("Country")
+                            .IsRequired()
+                            .HasMaxLength(100)
+                            .HasColumnType("character varying(100)")
+                            .HasColumnName("address_country");
+
+                        b1.Property<string>("Line1")
+                            .IsRequired()
+                            .HasMaxLength(200)
+                            .HasColumnType("character varying(200)")
+                            .HasColumnName("address_line1");
+
+                        b1.Property<string>("Line2")
+                            .HasMaxLength(200)
+                            .HasColumnType("character varying(200)")
+                            .HasColumnName("address_line2");
+
+                        b1.Property<string>("PostalCode")
+                            .HasMaxLength(20)
+                            .HasColumnType("character varying(20)")
+                            .HasColumnName("address_postal_code");
+
+                        b1.Property<string>("State")
+                            .HasMaxLength(100)
+                            .HasColumnType("character varying(100)")
+                            .HasColumnName("address_state");
+
+                        b1.HasKey("SupplierId");
+
+                        b1.ToTable("suppliers");
+
+                        b1.WithOwner()
+                            .HasForeignKey("SupplierId")
+                            .HasConstraintName("fk_suppliers_suppliers_id");
+                    });
+
+                b.Navigation("Address");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierInvoice", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_invoices_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Procurement.PurchaseOrder", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "PurchaseOrderId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .HasConstraintName("fk_supplier_invoices_purchase_orders_tenant_id_purchase_order_");
+
+                b.HasOne("StockForge.Domain.Procurement.Supplier", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "SupplierId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_invoices_suppliers_tenant_id_supplier_id");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierPayment", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_payments_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Procurement.SupplierInvoice", null)
+                    .WithMany("Payments")
+                    .HasForeignKey("TenantId", "SupplierInvoiceId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_payments_supplier_invoices_tenant_id_supplier_invo");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierProduct", b =>
+            {
+                b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_products_tenants_tenant_id");
+
+                b.HasOne("StockForge.Domain.Catalog.Product", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "ProductId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Restrict)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_products_products_tenant_id_product_id");
+
+                b.HasOne("StockForge.Domain.Procurement.Supplier", null)
+                    .WithMany()
+                    .HasForeignKey("TenantId", "SupplierId")
+                    .HasPrincipalKey("TenantId", "Id")
+                    .OnDelete(DeleteBehavior.Cascade)
+                    .IsRequired()
+                    .HasConstraintName("fk_supplier_products_suppliers_tenant_id_supplier_id");
+            });
+
         modelBuilder.Entity("StockForge.Domain.Sales.Customer", b =>
             {
                 b.HasOne("StockForge.Domain.Tenancy.Tenant", null)
@@ -4051,6 +5069,11 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
                             .HasColumnType("numeric(18,3)")
                             .HasColumnName("settings_order_approval_quantity");
 
+                        b1.Property<decimal>("PurchaseApprovalThreshold")
+                            .HasPrecision(18, 2)
+                            .HasColumnType("numeric(18,2)")
+                            .HasColumnName("settings_purchase_approval_threshold");
+
                         b1.Property<bool>("RequireApprovalForAllOrders")
                             .HasColumnType("boolean")
                             .HasColumnName("settings_require_approval_for_all_orders");
@@ -4152,6 +5175,21 @@ partial class AppDbContextModelSnapshot : ModelSnapshot
         modelBuilder.Entity("StockForge.Domain.Inventory.StockTransfer", b =>
             {
                 b.Navigation("Lines");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.GoodsReceipt", b =>
+            {
+                b.Navigation("Lines");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.PurchaseOrder", b =>
+            {
+                b.Navigation("Lines");
+            });
+
+        modelBuilder.Entity("StockForge.Domain.Procurement.SupplierInvoice", b =>
+            {
+                b.Navigation("Payments");
             });
 
         modelBuilder.Entity("StockForge.Domain.Sales.SalesOrder", b =>
