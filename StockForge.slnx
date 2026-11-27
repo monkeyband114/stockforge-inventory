@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StockForge.Domain/StockForge.Domain.csproj" />
+    <Project Path="src/StockForge.Application/StockForge.Application.csproj" />
+    <Project Path="src/StockForge.Infrastructure/StockForge.Infrastructure.csproj" />
+    <Project Path="src/StockForge.API/StockForge.API.csproj" />
+    <Project Path="src/StockForge.Worker/StockForge.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StockForge.Tests/StockForge.Tests.csproj" />
+  </Folder>
+</Solution>

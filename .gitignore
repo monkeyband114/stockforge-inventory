@@ -1,0 +1,28 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+*.trx
+coverage*.xml
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+web/next-env.d.ts
+*.tsbuildinfo
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+appsettings.*.local.json
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/

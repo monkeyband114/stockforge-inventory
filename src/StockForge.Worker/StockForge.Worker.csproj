@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+  <PropertyGroup>
+    <RootNamespace>StockForge.Worker</RootNamespace>
+    <UserSecretsId>stockforge-worker</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\StockForge.Infrastructure\StockForge.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="StockForge.Tests" />
+  </ItemGroup>
+</Project>

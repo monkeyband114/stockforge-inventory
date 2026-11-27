@@ -1,0 +1,5 @@
+# EF Core migrations are generated (class names carry the timestamp prefix).
+[*.cs]
+generated_code = true
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1861.severity = none

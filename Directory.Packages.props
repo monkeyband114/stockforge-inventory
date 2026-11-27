@@ -1,0 +1,42 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Data -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="11.0.0" />
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="11.0.0" />
+    <PackageVersion Include="EFCore.NamingConventions" Version="11.0.0" />
+    <!-- Identity / security -->
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="11.0.0" />
+    <!-- Caching / realtime -->
+    <PackageVersion Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="11.0.0" />
+    <!-- Application -->
+    <PackageVersion Include="FluentValidation" Version="12.2.0" />
+    <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+    <!-- Logging / API -->
+    <PackageVersion Include="Serilog.AspNetCore" Version="11.0.0" />
+    <PackageVersion Include="Serilog.Extensions.Hosting" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
+    <PackageVersion Include="Swashbuckle.AspNetCore.SwaggerUI" Version="11.0.1" />
+    <!-- Documents / messaging -->
+    <PackageVersion Include="QuestPDF" Version="2026.9.2" />
+    <PackageVersion Include="MailKit" Version="5.0.0" />
+    <!-- Hosting -->
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="11.0.0" />
+    <!-- Tests -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.17.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="11.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.Client" Version="11.0.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
+  </ItemGroup>
+</Project>
