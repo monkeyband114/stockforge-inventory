@@ -1,7 +1,21 @@
 "use client";
 
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeftRight, Boxes, ClipboardCheck, DollarSign, Package, PackageX, Warehouse as WarehouseIcon } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  Boxes,
+  ClipboardCheck,
+  Clock,
+  DollarSign,
+  Gauge,
+  Hourglass,
+  Package,
+  PackageX,
+  ShoppingCart,
+  Truck,
+  Warehouse as WarehouseIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,28 +26,28 @@ import { ChartSkeleton, StatGridSkeleton, TableSkeleton } from "@/components/ui/
 import { PageSpinner } from "@/components/ui/Spinner";
 import { MovementTrendChart, ValueBarChart, ViewToggle, useChartView } from "@/features/dashboard/Charts";
 import { DaysSelector, LowStockTable } from "@/features/dashboard/LowStockTable";
+import { MonthlySalesChart, OrderStatusBreakdown } from "@/features/dashboard/SalesCharts";
 import { api } from "@/lib/api";
 import { homePathFor, useAuth } from "@/lib/auth";
 import { formatCurrency, formatInteger, formatQty, formatRelative } from "@/lib/format";
 import { P } from "@/lib/permissions";
-import { qk, useCurrency, useWarehouses } from "@/lib/queries";
-import type { OrganizationDashboard } from "@/lib/types";
+import { qk, useCurrency } from "@/lib/queries";
+import type { OrderMetrics, OrganizationDashboard } from "@/lib/types";
 
 export default function DashboardPage() {
   const { hasAnyPermission, user } = useAuth();
   const router = useRouter();
   const allowed = hasAnyPermission(P.reportsOrganization, P.inventoryAnalytics);
-  const warehouses = useWarehouses();
 
   // Warehouse staff without analytics land on their own warehouse dashboard instead.
   useEffect(() => {
     if (allowed || !user) return;
-    const target = user.warehouseIds?.[0] ?? warehouses.data?.[0]?.id;
-    if (target) router.replace(`/warehouses/${target}`);
-    else if (!warehouses.isPending) router.replace(homePathFor(user) === "/dashboard" ? "/account" : homePathFor(user));
-  }, [allowed, user, warehouses.data, warehouses.isPending, router]);
+    const assigned = user.warehouseIds?.[0];
+    if (assigned) router.replace(`/warehouses/${assigned}`);
+    else router.replace(homePathFor(user) === "/dashboard" ? "/account" : homePathFor(user));
+  }, [allowed, user, router]);
 
-  if (!allowed) return <PageSpinner label="Opening your warehouse dashboard…" />;
+  if (!allowed) return <PageSpinner label="Opening your workspace…" />;
   return <OrganizationDashboardView />;
 }
 
@@ -138,6 +152,8 @@ function OrganizationDashboardView() {
             </div>
           )}
 
+          {d?.orders && hasPermission(P.ordersView) && <OrderSection metrics={d.orders} days={days} currency={currency} />}
+
           <Card>
             <CardHeader
               title="Stock movement"
@@ -208,5 +224,58 @@ function OrganizationDashboardView() {
         </div>
       )}
     </>
+  );
+}
+
+function OrderSection({ metrics: m, days, currency }: { metrics: OrderMetrics; days: number; currency: string }) {
+  const router = useRouter();
+  const { hasPermission } = useAuth();
+  const [salesView, setSalesView] = useChartView();
+  return (
+    <section aria-labelledby="orders-heading" className="space-y-4">
+      <h2 id="orders-heading" className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+        Sales &amp; fulfillment
+      </h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <StatCard label="Total orders" value={formatInteger(m.totalOrders)} sub="All time" icon={<ShoppingCart />} href="/orders" />
+        <StatCard
+          label="Pending approval"
+          value={formatInteger(m.pendingApproval)}
+          sub="Waiting for an approver"
+          icon={<Hourglass />}
+          tone={m.pendingApproval > 0 ? "warning" : "neutral"}
+          href="/orders?status=PendingApproval"
+        />
+        <StatCard label="Open orders" value={formatInteger(m.openOrders)} sub="Approved, not yet fully shipped" icon={<Package />} href={hasPermission(P.ordersFulfill) ? "/fulfillment" : "/orders"} />
+        <StatCard label={`Sales · last ${days} days`} value={formatCurrency(m.salesInPeriod, currency)} sub={`${formatInteger(m.shippedInPeriod)} orders shipped`} icon={<Truck />} tone="info" />
+        <StatCard
+          label="Fulfillment rate"
+          value={`${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(m.fulfillmentRatePercent)}%`}
+          sub={`Approved in the last ${days} days and fully shipped`}
+          icon={<Gauge />}
+          tone={m.fulfillmentRatePercent >= 90 ? "success" : m.fulfillmentRatePercent >= 60 ? "warning" : "danger"}
+        />
+        <StatCard
+          label="Avg. time to ship"
+          value={m.averageHoursToShip !== null ? `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(m.averageHoursToShip)} h` : "—"}
+          sub="Approval to shipment"
+          icon={<Clock />}
+        />
+      </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-5">
+        <Card className="xl:col-span-3">
+          <CardHeader title="Monthly sales" description={`Invoiced sales per month, in ${currency}`} actions={<ViewToggle view={salesView} onChange={setSalesView} />} />
+          <CardBody>
+            <MonthlySalesChart data={m.monthlySales} currency={currency} view={salesView} />
+          </CardBody>
+        </Card>
+        <Card className="xl:col-span-2">
+          <CardHeader title="Orders by status" description="Click a status to open those orders" />
+          <CardBody>
+            <OrderStatusBreakdown data={m.byStatus} onSelect={(status) => router.push(`/orders?status=${status}`)} />
+          </CardBody>
+        </Card>
+      </div>
+    </section>
   );
 }

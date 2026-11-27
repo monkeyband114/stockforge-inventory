@@ -202,7 +202,15 @@ export function toCreateRequest(form: ProductFormState): CreateProductRequest {
   };
 }
 
-export function toUpdateRequest(form: ProductFormState, version: number): UpdateProductRequest {
+function sameUnits(a: ProductUnitRequest[], b: ProductUnitRequest[]): boolean {
+  const norm = (list: ProductUnitRequest[]) =>
+    JSON.stringify([...list].map((u) => [u.unitId, Number(u.conversionFactor), u.barcode ?? null]).sort((x, y) => String(x[0]).localeCompare(String(y[0]))));
+  return norm(a) === norm(b);
+}
+
+export function toUpdateRequest(form: ProductFormState, version: number, original?: Product): UpdateProductRequest {
+  const units = unitsPayload(form);
+  const originalUnits = original?.units.map((u) => ({ unitId: u.unitId, conversionFactor: u.conversionFactor, barcode: u.barcode })) ?? null;
   return {
     name: form.name.trim(),
     description: form.description.trim() || null,
@@ -214,8 +222,9 @@ export function toUpdateRequest(form: ProductFormState, version: number): Update
     reorderLevel: Number(form.reorderLevel.trim()),
     reorderQuantity: Number(form.reorderQuantity.trim()),
     isActive: form.isActive,
-    // Always send the full list: the API replaces alternate units with exactly this set (null would clear them).
-    units: unitsPayload(form),
+    // null leaves alternate units untouched; send the list only when the user changed it ([] removes all).
+    // This also avoids `unit_inactive` when an existing assignment uses a since-deactivated unit.
+    units: originalUnits && sameUnits(units, originalUnits) ? null : units,
     version,
   };
 }
@@ -233,7 +242,8 @@ export function updateFromProduct(p: Product, overrides: Partial<UpdateProductRe
     reorderLevel: p.reorderLevel,
     reorderQuantity: p.reorderQuantity,
     isActive: p.isActive,
-    units: p.units.map((u) => ({ unitId: u.unitId, conversionFactor: u.conversionFactor, barcode: u.barcode })),
+    // Activate/deactivate never touches alternate units.
+    units: null,
     version: p.version,
     ...overrides,
   };

@@ -33,6 +33,11 @@ const ENTITY_TYPES = [
   "StockAdjustment",
   "StockTransfer",
   "StockReservation",
+  "Customer",
+  "SalesOrder",
+  "Shipment",
+  "SalesReturn",
+  "Invoice",
   "Tenant",
   "TenantMembership",
   "User",
@@ -59,6 +64,10 @@ const ACTIONS = [
   "OrganizationCreated",
   "TenantSuspended",
   "TenantActivated",
+  "OrderRejected",
+  "OrderCancelled",
+  "PaymentRecorded",
+  "ReturnReceived",
   "RefreshTokenReuseDetected",
 ];
 

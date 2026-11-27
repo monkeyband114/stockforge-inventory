@@ -29,6 +29,10 @@ const JOB_TYPES = [
   { value: "email.send", label: "Email delivery" },
   { value: "inventory.low_stock_alert", label: "Low-stock alert" },
   { value: "inventory.daily_summary", label: "Daily inventory summary" },
+  { value: "billing.invoice_pdf", label: "Invoice PDF" },
+  { value: "billing.invoice_email", label: "Invoice email" },
+  { value: "sales.order_confirmation_email", label: "Order confirmation email" },
+  { value: "sales.shipment_notification", label: "Shipment notification" },
 ];
 
 const REFRESH_MS = 15_000;

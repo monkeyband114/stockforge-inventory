@@ -41,6 +41,27 @@ function renderValue(value: JsonValue | undefined): React.ReactNode {
   return <code className="whitespace-pre-wrap break-all">{JSON.stringify(value)}</code>;
 }
 
+/**
+ * Resolves a changed-property name against recorded values. Keys are camelCase and may be dotted paths
+ * (e.g. `settings.defaultTaxRate`) stored either flat or nested; older entries may still be PascalCase.
+ */
+function lookup(values: { [key: string]: JsonValue } | null, key: string): JsonValue | undefined {
+  if (!values) return undefined;
+  if (key in values) return values[key];
+  const ci = (obj: { [key: string]: JsonValue }, k: string) => {
+    const match = Object.keys(obj).find((x) => x.toLowerCase() === k.toLowerCase());
+    return match === undefined ? undefined : obj[match];
+  };
+  const flat = ci(values, key);
+  if (flat !== undefined) return flat;
+  let cursor: JsonValue | undefined = values;
+  for (const part of key.split(".")) {
+    if (!isRecord(cursor)) return undefined;
+    cursor = ci(cursor, part);
+  }
+  return cursor;
+}
+
 /** Property-level old → new comparison for one audit entry. */
 export function AuditDiff({ log }: { log: AuditLog }) {
   const oldV = isRecord(log.oldValues) ? log.oldValues : null;
@@ -74,8 +95,8 @@ export function AuditDiff({ log }: { log: AuditLog }) {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {keys.map((key) => {
-                const before = oldV?.[key];
-                const after = newV?.[key];
+                const before = lookup(oldV, key);
+                const after = lookup(newV, key);
                 const changed = showOld && JSON.stringify(before) !== JSON.stringify(after);
                 return (
                   <tr key={key} className={cn(changed && "bg-amber-50/60")}>

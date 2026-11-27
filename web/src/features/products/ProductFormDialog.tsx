@@ -126,7 +126,7 @@ export function ProductFormDialog({ open, onClose, mode, product, onReload, onSa
         toast.success("Product created", `${saved.name} · ${saved.sku}`);
       } else {
         if (!product) return;
-        saved = await api.put<Product>(`/api/products/${product.id}`, toUpdateRequest(form, product.version));
+        saved = await api.put<Product>(`/api/products/${product.id}`, toUpdateRequest(form, product.version, product));
         toast.success("Product updated", saved.name);
       }
       queryClient.setQueryData(qk.product(saved.id), saved);

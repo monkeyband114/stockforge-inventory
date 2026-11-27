@@ -198,7 +198,8 @@ public sealed record OrderDto(
     OrderInvoiceDto? Invoice,
     IReadOnlyList<ShipmentDto> Shipments,
     IReadOnlyList<SalesReturnDto> Returns,
-    uint Version);
+    uint Version,
+    Guid CreatedByUserId);
 
 public sealed record FulfillmentQueueItemDto(
     Guid OrderId,

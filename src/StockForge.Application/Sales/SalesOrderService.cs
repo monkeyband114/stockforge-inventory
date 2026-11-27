@@ -126,7 +126,8 @@ public sealed class SalesOrderService(
             returns.Select(r => new SalesReturnDto(r.Id, r.Number, r.SalesOrderId, r.Reason, r.CreditAmount, r.ReceivedAt,
                 r.Lines.Select(l => new SalesReturnLineDto(l.SalesOrderLineId, l.ProductId, skus.GetValueOrDefault(l.ProductId, ""),
                     l.Quantity, l.Restock, l.CreditAmount)).ToList())).ToList(),
-            order.Version);
+            order.Version,
+            order.CreatedByUser);
     }
 
     /// <summary>Picking/packing queue: approved orders not yet fully shipped, oldest commitment first.</summary>
@@ -217,10 +218,12 @@ public sealed class SalesOrderService(
             var order = await LoadAsync(id, token);
             WarehouseService.EnsureVersion(order.Version, request.Version);
             var tenant = await LoadTenantAsync(token);
-            await RequireCustomerAsync(request.CustomerId, token);
+            var customer = await RequireCustomerAsync(request.CustomerId, token);
             await RequireWarehouseAsync(request.WarehouseId, token);
+            // Same default as create: the customer's shipping (or billing) address when none is given.
+            var shipTo = request.ShippingAddress?.ToDomain() ?? (customer.ShippingAddress ?? customer.BillingAddress)?.Copy();
             order.SetDetails(request.CustomerId, request.WarehouseId, request.RequiredDate, request.CustomerReference, request.Notes,
-                request.DiscountPercent, request.ShippingAddress?.ToDomain());
+                request.DiscountPercent, shipTo);
             order.SetLines(await PriceLinesAsync(request.Lines, tenant.Settings, token));
             await db.SaveChangesAsync(token);
             return true;

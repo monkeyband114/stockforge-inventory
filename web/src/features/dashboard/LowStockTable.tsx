@@ -57,7 +57,7 @@ export function LowStockTable({ items, showWarehouse = true }: { items: LowStock
   );
 }
 
-export function DaysSelector({ value, onChange, options = [7, 30, 90] }: { value: number; onChange: (d: number) => void; options?: number[] }) {
+export function DaysSelector({ value, onChange, options = [7, 30, 90], unit = "days" }: { value: number; onChange: (d: number) => void; options?: number[]; unit?: string }) {
   return (
     <div className="inline-flex rounded-md border border-slate-200 bg-white p-0.5" role="group" aria-label="Time range">
       {options.map((d) => (
@@ -70,7 +70,7 @@ export function DaysSelector({ value, onChange, options = [7, 30, 90] }: { value
             value === d ? "rounded bg-brand-700 px-2.5 py-1 text-xs font-medium text-white" : "rounded px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
           }
         >
-          {d} days
+          {d} {unit}
         </button>
       ))}
     </div>
