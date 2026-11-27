@@ -88,22 +88,22 @@ public static class EmailTemplates
         $"Dear {customer},",
         $"Thank you for your order {orderNumber} ({total}). Items: " + string.Join("; ", lines.Select(l => $"{l.Value} × {l.Label}")) +
         ". We will let you know when it ships.",
-        "Contact us", $"mailto:");
+        null, null);
 
     public static (string Subject, string Html, string Text) InvoiceIssued(string customer, string organization, string invoiceNumber,
         string total, string dueDate) => Build(
         $"Invoice {invoiceNumber} from {organization}",
         $"Dear {customer},",
         $"Please find attached invoice {invoiceNumber} for {total}, due on {dueDate}.",
-        "Questions? Reply to this email", "mailto:");
+        null, null);
 
     public static (string Subject, string Html, string Text) ShipmentDispatched(string customer, string orderNumber, string? carrier,
         string? tracking, string items) => Build(
         $"Your order {orderNumber} has shipped",
         $"Dear {customer},",
         $"Shipment for order {orderNumber} is on its way ({items})" +
-        (carrier is null ? "." : $" with {carrier}") + (tracking is null ? "." : $", tracking number {tracking}."),
-        "Track your order", "mailto:");
+        (carrier is null ? "" : $" with {carrier}") + (tracking is null ? "." : $", tracking number {tracking}."),
+        null, null);
 
     public static (string Subject, string Html, string Text) LowStock(string product, string sku, string warehouse, decimal available, decimal reorderLevel, string link) => Build(
         $"Low stock: {sku} at {warehouse}",
