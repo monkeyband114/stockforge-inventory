@@ -103,6 +103,7 @@ public sealed class ReservationService(
         var expiredIds = await db.StockReservations
             .Where(r => r.Status == ReservationStatus.Active && r.ExpiresAt != null && r.ExpiresAt <= now &&
                         r.ReferenceType == MovementReferenceType.StockReservation)
+            .OrderBy(r => r.ExpiresAt)
             .Select(r => r.Id)
             .Take(500)
             .ToListAsync(cancellationToken);

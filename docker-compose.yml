@@ -1,0 +1,130 @@
+# StockForge — full stack for local evaluation and as a reference deployment.
+#   cp .env.example .env   # then change every secret
+#   docker compose up --build
+#   docker compose up --build --scale api=3 --scale worker=2   # horizontal scaling
+#
+# Web: http://localhost:3000   API (gateway): http://localhost:8080/swagger   Mail: http://localhost:8025
+name: stockforge
+
+x-backend-env: &backend-env
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+  DOTNET_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+  ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-stockforge};Username=stockforge_app;Password=${APP_DB_PASSWORD:-change-me-app};Maximum Pool Size=100
+  ConnectionStrings__Redis: redis:6379,abortConnect=false
+  Jwt__SigningKey: ${JWT_SIGNING_KEY:-change-me-to-a-long-random-secret-of-at-least-32-bytes}
+  Jwt__Issuer: stockforge
+  Jwt__Audience: stockforge-api
+  App__FrontendBaseUrl: ${FRONTEND_URL:-http://localhost:3000}
+  Smtp__Host: ${SMTP_HOST:-mailpit}
+  Smtp__Port: ${SMTP_PORT:-1025}
+  Smtp__UseStartTls: ${SMTP_STARTTLS:-false}
+  Smtp__Username: ${SMTP_USERNAME:-}
+  Smtp__Password: ${SMTP_PASSWORD:-}
+  Smtp__FromAddress: ${SMTP_FROM:-no-reply@stockforge.local}
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-stockforge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-owner}
+      POSTGRES_DB: ${POSTGRES_DB:-stockforge}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
+
+  # One-shot: applies migrations as the owner, provisions the least-privileged runtime role, seeds roles,
+  # the platform super-admin and (optionally) demo data. API and worker start after it succeeds.
+  migrator:
+    build:
+      context: .
+      dockerfile: docker/dotnet.Dockerfile
+      args: { PROJECT: StockForge.API }
+    image: stockforge-api:local
+    command: ["--migrate"]
+    environment:
+      <<: *backend-env
+      ConnectionStrings__Migrations: Host=postgres;Port=5432;Database=${POSTGRES_DB:-stockforge};Username=${POSTGRES_USER:-stockforge};Password=${POSTGRES_PASSWORD:-change-me-owner}
+      Database__AppRolePassword: ${APP_DB_PASSWORD:-change-me-app}
+      Seed__SuperAdminEmail: ${SUPERADMIN_EMAIL:-superadmin@stockforge.local}
+      Seed__SuperAdminPassword: ${SUPERADMIN_PASSWORD:-SuperAdmin!2026}
+      Seed__DemoData: ${SEED_DEMO_DATA:-true}
+      Seed__DemoPassword: ${DEMO_PASSWORD:-StockForge!2026}
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+
+  api:
+    image: stockforge-api:local
+    environment:
+      <<: *backend-env
+      Database__MigrateOnStartup: "false"
+      Database__SeedOnStartup: "false"
+      Cors__AllowedOrigins__0: ${FRONTEND_URL:-http://localhost:3000}
+      ForwardedHeaders__Enabled: "true"
+      Https__Redirect: "false"          # TLS terminates at the gateway / ingress.
+      OpenApi__Enabled: ${OPENAPI_ENABLED:-true}
+    depends_on:
+      migrator: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/dotnet.Dockerfile
+      args: { PROJECT: StockForge.Worker }
+    image: stockforge-worker:local
+    environment:
+      <<: *backend-env
+    depends_on:
+      migrator: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  gateway:
+    image: nginx:1.29-alpine
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-http://localhost:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gateway
+    restart: unless-stopped
+
+volumes:
+  pgdata:
