@@ -36,6 +36,7 @@ internal sealed class AuditingInterceptor(ScopeContext scope, TimeProvider clock
     {
         Converters = { new JsonStringEnumConverter() },
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
+        DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
     };
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -203,7 +204,7 @@ internal sealed class AuditingInterceptor(ScopeContext scope, TimeProvider clock
                 continue;
             }
 
-            var key = prefix is null ? name : $"{prefix}.{name}";
+            var key = CamelCase(prefix is null ? name : $"{prefix}.{name}");
             switch (entry.State)
             {
                 case EntityState.Added:
@@ -246,6 +247,10 @@ internal sealed class AuditingInterceptor(ScopeContext scope, TimeProvider clock
         var ownerKey = ownership.PrincipalKey.Properties.Select(p => owner.Property(p.Name).CurrentValue);
         return ownedKey.SequenceEqual(ownerKey);
     }
+
+    // Matches the API's JSON casing: "settings.defaultTaxRate".
+    private static string CamelCase(string path) =>
+        string.Join('.', path.Split('.').Select(part => part.Length == 0 ? part : char.ToLowerInvariant(part[0]) + part[1..]));
 
     private static string? Serialize(Dictionary<string, object?> values) =>
         values.Count == 0 ? null : JsonSerializer.Serialize(values, Json);

@@ -137,7 +137,211 @@ internal sealed class DevelopmentDataSeeder(IServiceScopeFactory scopeFactory, I
                 AdjustmentReason.Found, 3, "Found behind returns cage"), ct);
         }, ct);
 
+        await SeedSalesAsync(ids, ct);
         return ids.Users["inventory@acme.test"];
+    }
+
+    /// <summary>
+    /// Customers and ~20 orders across every lifecycle state, created by the sales officer, approved by the
+    /// finance manager and fulfilled by the CDC warehouse manager — through the real services.
+    /// </summary>
+    private async Task SeedSalesAsync(SeededTenant ids, CancellationToken ct)
+    {
+        var customers = new (string Name, string Email, string City, string State, int? Terms, decimal? Credit)[]
+        {
+            ("Brightline Logistics", "ap@brightline.test", "Jersey City", "NJ", 30, null),
+            ("Northwind Facilities Management", "invoices@northwind-fm.test", "Stamford", "CT", 45, null),
+            ("Harbor City Schools", "procurement@harborschools.test", "Boston", "MA", 30, null),
+            ("Summit Health Clinics", "finance@summithealth.test", "Albany", "NY", 30, 6000m),
+            ("Metro Office Partners", "orders@metro-office.test", "Brooklyn", "NY", 15, null),
+            ("Greenfield Construction", "site@greenfield.test", "Newark", "NJ", 30, null),
+            ("Riverside Hospitality Group", "purchasing@riverside.test", "Hoboken", "NJ", 30, null),
+        };
+
+        var customerIds = new List<Guid>();
+        await RunAsAsync(ids, "sales@acme.test", async services =>
+        {
+            var service = services.GetRequiredService<Application.Sales.CustomerService>();
+            foreach (var c in customers)
+            {
+                using var _ = AdjustableClock.Use(DateTimeOffset.UtcNow.AddDays(-29));
+                var address = new Application.Warehouses.AddressDto($"{100 + customerIds.Count * 17} Commerce Ave", null, c.City, c.State, "07000", "United States");
+                customerIds.Add((await service.CreateAsync(new Application.Sales.CustomerRequest(
+                    c.Name, c.Email, "+1 555 0100", null, address, address, c.Terms, c.Credit, null), ct)).Id);
+            }
+        }, ct);
+
+        // (customer, lines, days ago, final stage, warehouse)
+        string[] catalog = ["Hi-Vis Safety Vest", "Nitrile Gloves (Box of 100)", "Packing Tape 48mm x 66m", "A4 Copy Paper (500 sheets)",
+            "Bottled Water 500ml (24 pack)", "Safety Helmet EN397", "Corrugated Box 40x30x30", "Stretch Wrap Film 500mm", "Industrial Floor Cleaner 5L",
+            "Wireless Barcode Scanner", "Ballpoint Pens (Box of 50)", "First Aid Kit (Workplace)"];
+        var random = new Random(4242);
+        var plans = new List<(int Customer, (string Product, decimal Qty)[] Lines, int DaysAgo, string Stage, string Warehouse)>();
+        string[] stages = ["paid", "paid", "delivered", "paid", "delivered", "shipped", "paid", "returned", "delivered", "shipped", "partial",
+            "packed", "picking", "processing", "approved", "approved", "pending", "draft", "cancelled", "rejected"];
+        for (var i = 0; i < stages.Length; i++)
+        {
+            var lineCount = random.Next(1, 4);
+            var lines = catalog.OrderBy(_ => random.Next()).Take(lineCount)
+                .Select(p => (p, (decimal)random.Next(4, 30))).ToArray();
+            if (stages[i] is "pending" or "rejected")
+            {
+                lines = [("Corrugated Box 40x30x30", 650m)]; // Bulk order → manager approval.
+            }
+
+            plans.Add((random.Next(customers.Length), lines, 28 - i, stages[i], i is 14 ? "NHB" : "CDC"));
+        }
+
+        foreach (var plan in plans)
+        {
+            try
+            {
+                await SeedOrderAsync(ids, customerIds[plan.Customer], plan.Lines, plan.DaysAgo, plan.Stage, plan.Warehouse, ct);
+            }
+            catch (InsufficientStockException)
+            {
+                // Random demo history may hit an empty shelf; production would reject exactly the same way.
+            }
+        }
+    }
+
+    private async Task SeedOrderAsync(SeededTenant ids, Guid customerId, (string Product, decimal Qty)[] lines, int daysAgo,
+        string stage, string warehouse, CancellationToken ct)
+    {
+        var day = DateTimeOffset.UtcNow.Date.AddDays(-daysAgo);
+        var at = (double hours) => new DateTimeOffset(day, TimeSpan.Zero).AddHours(hours);
+        Guid orderId = Guid.Empty;
+
+        await RunAsAsync(ids, "sales@acme.test", async services =>
+        {
+            using var _ = AdjustableClock.Use(at(13));
+            var order = await services.GetRequiredService<Application.Sales.SalesOrderService>().CreateAsync(new Application.Sales.CreateOrderRequest(
+                customerId, ids.Warehouses[warehouse], DateOnly.FromDateTime(day.AddDays(5)), $"PO-{random4(daysAgo)}", null,
+                stage == "paid" ? 5 : 0, null,
+                lines.Select(l => new Application.Sales.OrderLineRequest(ids.Products[l.Product], l.Qty)).ToList(),
+                Submit: stage != "draft"), null, ct);
+            orderId = order.Id;
+        }, ct);
+
+        if (stage is "draft" or "pending")
+        {
+            return;
+        }
+
+        if (stage == "rejected")
+        {
+            await RunAsAsync(ids, "finance@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(15));
+                var orders = services.GetRequiredService<Application.Sales.SalesOrderService>();
+                if ((await orders.GetAsync(orderId, ct)).Status == Domain.Sales.SalesOrderStatus.PendingApproval)
+                {
+                    await orders.RejectAsync(orderId, new Application.Sales.ReasonRequest("Pricing not agreed with the customer"), ct);
+                }
+                else
+                {
+                    await orders.CancelAsync(orderId, new Application.Sales.ReasonRequest("Customer withdrew the order"), ct);
+                }
+            }, ct);
+            return;
+        }
+
+        if (stage == "cancelled")
+        {
+            await RunAsAsync(ids, "sales@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(16));
+                await services.GetRequiredService<Application.Sales.SalesOrderService>()
+                    .CancelAsync(orderId, new Application.Sales.ReasonRequest("Duplicate order placed by the customer"), ct);
+            }, ct);
+            return;
+        }
+
+        if (stage == "approved")
+        {
+            return;
+        }
+
+        string[] order = ["processing", "picking", "packed", "partial", "shipped", "delivered", "paid", "returned"];
+        var rank = Array.IndexOf(order, stage);
+        await RunAsAsync(ids, "whmanager@acme.test", async services =>
+        {
+            var orders = services.GetRequiredService<Application.Sales.SalesOrderService>();
+            using (AdjustableClock.Use(at(24 + 8)))
+            {
+                await orders.StartProcessingAsync(orderId, ct);
+            }
+
+            if (rank < 1)
+            {
+                return;
+            }
+
+            using (AdjustableClock.Use(at(24 + 9)))
+            {
+                var dto = await orders.StartPickingAsync(orderId, ct);
+                if (rank < 2)
+                {
+                    return;
+                }
+
+                var partial = stage == "partial";
+                await orders.RecordPickAsync(orderId, new Application.Sales.RecordPickRequest(dto.Lines
+                    .Select(l => new Application.Sales.PickLineRequest(l.Id, partial ? Math.Max(1, Math.Floor(l.Quantity / 2)) : l.Quantity)).ToList()), ct);
+                await orders.PackAsync(orderId, ct);
+            }
+
+            if (rank < 3)
+            {
+                return;
+            }
+
+            using (AdjustableClock.Use(at(24 + 14)))
+            {
+                await orders.ShipAsync(orderId, new Application.Sales.ShipOrderRequest("UPS Ground", $"1Z{random4(daysAgo)}{random4(daysAgo + 7)}", 2), ct);
+            }
+
+            if (rank < 5)
+            {
+                return;
+            }
+
+            using (AdjustableClock.Use(at(72 + 11)))
+            {
+                var shipped = await orders.GetAsync(orderId, ct);
+                foreach (var shipment in shipped.Shipments)
+                {
+                    await orders.DeliverShipmentAsync(shipment.Id, ct);
+                }
+            }
+
+            if (stage == "returned")
+            {
+                using var _ = AdjustableClock.Use(at(120 + 10));
+                var dto = await orders.GetAsync(orderId, ct);
+                var line = dto.Lines[0];
+                await orders.CreateReturnAsync(orderId, new Application.Sales.CreateReturnRequest(
+                    [new Application.Sales.ReturnLineRequest(line.Id, Math.Max(1, Math.Floor(line.Quantity / 3)), Restock: true)],
+                    "Customer over-ordered; unopened cartons returned"), ct);
+            }
+        }, ct);
+
+        if (stage == "paid")
+        {
+            await RunAsAsync(ids, "finance@acme.test", async services =>
+            {
+                using var _ = AdjustableClock.Use(at(24 * 8));
+                var orders = services.GetRequiredService<Application.Sales.SalesOrderService>();
+                var invoice = (await orders.GetAsync(orderId, ct)).Invoice;
+                if (invoice is not null && invoice.BalanceDue > 0)
+                {
+                    await services.GetRequiredService<Application.Billing.InvoiceService>().RecordPaymentAsync(invoice.Id,
+                        new Application.Billing.RecordPaymentRequest(invoice.BalanceDue, Domain.Billing.PaymentMethod.BankTransfer, $"ACH-{random4(daysAgo)}", null), ct);
+                }
+            }, ct);
+        }
+
+        static string random4(int seed) => (1000 + (seed * 7919 % 9000)).ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private async Task SeedGlobexAsync(Guid sharedUserId, CancellationToken ct)

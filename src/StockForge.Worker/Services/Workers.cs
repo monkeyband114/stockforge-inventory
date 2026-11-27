@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using StockForge.Application.Abstractions;
+using StockForge.Application.Billing;
 using StockForge.Application.Inventory;
 using StockForge.Application.Jobs;
 using StockForge.Domain.Platform;
@@ -93,6 +94,9 @@ public sealed class ScheduledJobsWorker(
             ForEachTenantAsync(async services => await services.GetRequiredService<IdempotencyStore>().PurgeExpiredAsync(ct), ct), cancellationToken);
 
         await RunOnceAsync("purge-outbox", today.ToString("O"), PurgeOutboxAsync, cancellationToken);
+
+        await RunOnceAsync("mark-overdue-invoices", today.ToString("O"), ct =>
+            ForEachTenantAsync(async services => await services.GetRequiredService<InvoiceService>().MarkOverdueAsync(ct), ct), cancellationToken);
 
         if (now.Hour >= options.Value.DailySummaryHourUtc)
         {

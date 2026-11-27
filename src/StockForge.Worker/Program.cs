@@ -1,5 +1,7 @@
 using Serilog;
+using StockForge.Application.Billing;
 using StockForge.Application.Jobs;
+using StockForge.Application.Sales;
 using StockForge.Infrastructure;
 using StockForge.Infrastructure.Jobs;
 using StockForge.Worker.Handlers;
@@ -40,5 +42,9 @@ public static class WorkerRegistration
     public static IServiceCollection AddWorkerJobs(this IServiceCollection services) => services
         .AddJobHandler<SendEmailJob, SendEmailJobHandler>()
         .AddJobHandler<LowStockAlertJob, LowStockAlertJobHandler>()
-        .AddJobHandler<DailyInventorySummaryJob, DailyInventorySummaryJobHandler>();
+        .AddJobHandler<DailyInventorySummaryJob, DailyInventorySummaryJobHandler>()
+        .AddJobHandler<GenerateInvoicePdfJob, GenerateInvoicePdfJobHandler>()
+        .AddJobHandler<InvoiceEmailJob, InvoiceEmailJobHandler>()
+        .AddJobHandler<OrderConfirmationEmailJob, OrderConfirmationEmailJobHandler>()
+        .AddJobHandler<ShipmentNotificationJob, ShipmentNotificationJobHandler>();
 }

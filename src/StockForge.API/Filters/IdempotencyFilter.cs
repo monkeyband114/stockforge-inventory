@@ -26,7 +26,7 @@ public sealed class IdempotentAttribute : Attribute, IFilterFactory
     public IFilterMetadata CreateInstance(IServiceProvider serviceProvider) => new IdempotencyFilter(Required);
 }
 
-internal sealed class IdempotencyFilter(bool required) : IAsyncActionFilter
+public sealed class IdempotencyFilter(bool required) : IAsyncActionFilter
 {
     public const string Header = "Idempotency-Key";
     public const string ReplayedHeader = "Idempotent-Replayed";

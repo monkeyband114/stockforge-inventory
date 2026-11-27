@@ -252,7 +252,13 @@ public sealed class ProductService(
                       ?? throw new NotFoundException("Product", id);
         WarehouseService.EnsureVersion(product.Version, request.Version);
         var category = await ResolveCategoryAsync(request.CategoryId, cancellationToken);
-        await EnsureUnitsExistAsync(product.BaseUnitId, request.Units, cancellationToken);
+        if (request.Units is not null)
+        {
+            // Units already on the product may since have been deactivated; only newly added ones must be active.
+            var newUnits = request.Units.Where(u => product.Units.All(existing => existing.UnitOfMeasureId != u.UnitId)).ToList();
+            await EnsureUnitsExistAsync(null, newUnits, cancellationToken);
+        }
+
         await EnsureBarcodesUniqueAsync(id, request.Barcode, request.Units, cancellationToken);
 
         product.UpdateDetails(request.Name, request.Description, category?.Id);
@@ -260,7 +266,12 @@ public sealed class ProductService(
         product.SetStockThresholds(request.ReorderLevel, request.ReorderQuantity);
         product.SetBarcode(request.Barcode);
         product.SetActive(request.IsActive);
-        product.ReplaceUnits((request.Units ?? []).Select(u => (u.UnitId, u.ConversionFactor, u.Barcode)).ToList());
+        if (request.Units is not null)
+        {
+            // Omitting `units` leaves alternate units untouched; an empty list removes them.
+            product.ReplaceUnits(request.Units.Select(u => (u.UnitId, u.ConversionFactor, u.Barcode)).ToList());
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return await GetAsync(id, cancellationToken);
     }
@@ -345,13 +356,24 @@ public sealed class ProductService(
             ? await db.ProductCategories.FirstOrDefaultAsync(c => c.Id == id, token) ?? throw new NotFoundException("Category", id)
             : null;
 
-    private async Task EnsureUnitsExistAsync(Guid baseUnitId, IReadOnlyList<ProductUnitRequest>? units, CancellationToken token)
+    private async Task EnsureUnitsExistAsync(Guid? baseUnitId, IReadOnlyList<ProductUnitRequest>? units, CancellationToken token)
     {
-        var ids = (units ?? []).Select(u => u.UnitId).Append(baseUnitId).Distinct().ToList();
-        var found = await db.UnitsOfMeasure.CountAsync(u => ids.Contains(u.Id) && u.IsActive, token);
-        if (found != ids.Count)
+        var ids = (units ?? []).Select(u => u.UnitId).ToList();
+        if (baseUnitId is { } baseId)
+        {
+            ids.Add(baseId);
+        }
+
+        ids = ids.Distinct().ToList();
+        var found = await db.UnitsOfMeasure.Where(u => ids.Contains(u.Id)).Select(u => new { u.Id, u.IsActive }).ToListAsync(token);
+        if (found.Count != ids.Count)
         {
             throw new NotFoundException("Unit of measure");
+        }
+
+        if (found.FirstOrDefault(u => !u.IsActive) is not null)
+        {
+            throw new DomainException("unit_inactive", "An inactive unit of measure cannot be assigned to a product.");
         }
     }
 

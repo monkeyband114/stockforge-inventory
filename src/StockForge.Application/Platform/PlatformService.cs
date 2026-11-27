@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using StockForge.Application.Abstractions;
 using StockForge.Application.Common;
@@ -29,6 +30,11 @@ public sealed record TenantListQuery : PageQuery
 }
 
 public sealed record SuspendTenantRequest(string Reason);
+
+public sealed class SuspendTenantRequestValidator : AbstractValidator<SuspendTenantRequest>
+{
+    public SuspendTenantRequestValidator() => RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
+}
 
 /// <summary>Raw row returned by the SECURITY DEFINER function <c>platform_tenant_stats()</c>.</summary>
 public sealed class TenantStatsRow

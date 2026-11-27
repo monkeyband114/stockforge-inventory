@@ -80,6 +80,12 @@ public sealed class RecordPaymentRequestValidator : AbstractValidator<RecordPaym
     }
 }
 
+/// <summary>Emails the invoice PDF to the customer's billing address.</summary>
+public sealed record InvoiceEmailJob(Guid InvoiceId) : IJob
+{
+    public static string JobType => "billing.invoice_email";
+}
+
 /// <summary>Everything an invoice document shows. Rendered to PDF by the worker.</summary>
 public sealed record InvoiceDocument(Organization.OrganizationDto Organization, InvoiceDto Invoice);
 

@@ -16,7 +16,7 @@ public sealed record AuthResponse(
 
 [ApiController]
 [Route("api/auth")]
-public sealed class AuthController(IAuthService auth) : ControllerBase
+public sealed class AuthController(IAuthService auth, IConfiguration configuration) : ControllerBase
 {
     public const string RefreshCookie = "sf_refresh";
 
@@ -127,7 +127,7 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
         Response.Cookies.Append(RefreshCookie, result.RefreshToken, new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
+            Secure = SecureCookie,
             SameSite = SameSiteMode.Strict,
             Path = "/api/auth",
             Expires = result.RefreshTokenExpiresAt,
@@ -141,5 +141,11 @@ public sealed class AuthController(IAuthService auth) : ControllerBase
     }
 
     private void ClearCookie() =>
-        Response.Cookies.Delete(RefreshCookie, new CookieOptions { Path = "/api/auth", Secure = true, SameSite = SameSiteMode.Strict, HttpOnly = true });
+        Response.Cookies.Delete(RefreshCookie, new CookieOptions { Path = "/api/auth", Secure = SecureCookie, SameSite = SameSiteMode.Strict, HttpOnly = true });
+
+    /// <summary>
+    /// Secure unless the request is plain HTTP and the operator explicitly allows it (`Auth:AllowInsecureRefreshCookie`) —
+    /// only for HTTP-only test environments on hosts other than localhost; production must use HTTPS.
+    /// </summary>
+    private bool SecureCookie => Request.IsHttps || !configuration.GetValue<bool>("Auth:AllowInsecureRefreshCookie");
 }
