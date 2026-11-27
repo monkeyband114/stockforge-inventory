@@ -88,7 +88,8 @@ public sealed class TenantSettings
         decimal defaultTaxRate,
         int invoiceDueDays,
         bool stockAdjustmentRequiresApproval,
-        bool lowStockAlertsEnabled)
+        bool lowStockAlertsEnabled,
+        decimal purchaseApprovalThreshold = 5_000m)
     {
         OrderApprovalAmountThreshold = Guard.NotNegative(orderApprovalAmountThreshold, "Order approval amount threshold");
         OrderApprovalQuantityThreshold = Guard.NotNegative(orderApprovalQuantityThreshold, "Order approval quantity threshold");
@@ -104,6 +105,7 @@ public sealed class TenantSettings
             : throw new DomainValidationException("Invoice due days must be between 0 and 365.");
         StockAdjustmentRequiresApproval = stockAdjustmentRequiresApproval;
         LowStockAlertsEnabled = lowStockAlertsEnabled;
+        PurchaseApprovalThreshold = Guard.NotNegative(purchaseApprovalThreshold, "Purchase approval threshold");
     }
 
     /// <summary>Orders whose total exceeds this amount require manager approval.</summary>
@@ -122,4 +124,7 @@ public sealed class TenantSettings
     public bool StockAdjustmentRequiresApproval { get; private set; } = true;
 
     public bool LowStockAlertsEnabled { get; private set; } = true;
+
+    /// <summary>Purchase orders with a total above this need approval; 0 means every purchase order needs approval.</summary>
+    public decimal PurchaseApprovalThreshold { get; private set; } = 5_000m;
 }

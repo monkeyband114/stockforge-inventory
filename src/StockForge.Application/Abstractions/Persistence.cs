@@ -3,6 +3,7 @@ using StockForge.Domain.Billing;
 using StockForge.Domain.Catalog;
 using StockForge.Domain.Inventory;
 using StockForge.Domain.Platform;
+using StockForge.Domain.Procurement;
 using StockForge.Domain.Sales;
 using StockForge.Domain.Tenancy;
 
@@ -34,6 +35,12 @@ public interface IAppDbContext
     DbSet<SalesReturn> SalesReturns { get; }
     DbSet<Invoice> Invoices { get; }
     DbSet<Payment> Payments { get; }
+    DbSet<Supplier> Suppliers { get; }
+    DbSet<SupplierProduct> SupplierProducts { get; }
+    DbSet<PurchaseOrder> PurchaseOrders { get; }
+    DbSet<GoodsReceipt> GoodsReceipts { get; }
+    DbSet<SupplierInvoice> SupplierInvoices { get; }
+    DbSet<SupplierPayment> SupplierPayments { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<OutboxMessage> OutboxMessages { get; }
     DbSet<IdempotencyRecord> IdempotencyRecords { get; }
@@ -83,6 +90,8 @@ public static class SequenceNames
     public const string GoodsReceipt = "goods_receipt";
     public const string Customer = "customer";
     public const string SalesReturn = "sales_return";
+    public const string Supplier = "supplier";
+    public const string SupplierInvoice = "supplier_invoice";
 }
 
 /// <summary>Writes explicit audit entries (logins, approvals, security events) in the current unit of work.</summary>

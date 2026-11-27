@@ -13,15 +13,16 @@ public sealed record TenantSettingsDto(
     decimal DefaultTaxRate,
     int InvoiceDueDays,
     bool StockAdjustmentRequiresApproval,
-    bool LowStockAlertsEnabled)
+    bool LowStockAlertsEnabled,
+    decimal PurchaseApprovalThreshold = 5_000m)
 {
     public static TenantSettingsDto From(TenantSettings s) => new(
         s.OrderApprovalAmountThreshold, s.OrderApprovalQuantityThreshold, s.RequireApprovalForAllOrders,
-        s.DefaultTaxRate, s.InvoiceDueDays, s.StockAdjustmentRequiresApproval, s.LowStockAlertsEnabled);
+        s.DefaultTaxRate, s.InvoiceDueDays, s.StockAdjustmentRequiresApproval, s.LowStockAlertsEnabled, s.PurchaseApprovalThreshold);
 
     public TenantSettings ToDomain() => new(
         OrderApprovalAmountThreshold, OrderApprovalQuantityThreshold, RequireApprovalForAllOrders, DefaultTaxRate,
-        InvoiceDueDays, StockAdjustmentRequiresApproval, LowStockAlertsEnabled);
+        InvoiceDueDays, StockAdjustmentRequiresApproval, LowStockAlertsEnabled, PurchaseApprovalThreshold);
 }
 
 public sealed record OrganizationDto(
@@ -73,6 +74,7 @@ public sealed class TenantSettingsDtoValidator : AbstractValidator<TenantSetting
         RuleFor(x => x.OrderApprovalQuantityThreshold).GreaterThanOrEqualTo(0);
         RuleFor(x => x.DefaultTaxRate).InclusiveBetween(0, 1);
         RuleFor(x => x.InvoiceDueDays).InclusiveBetween(0, 365);
+        RuleFor(x => x.PurchaseApprovalThreshold).GreaterThanOrEqualTo(0);
     }
 }
 

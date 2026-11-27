@@ -82,6 +82,7 @@ public static class RolePermissionDefaults
             Permissions.Inventory.View, Permissions.Inventory.ViewAllWarehouses,
             Permissions.Procurement.ViewSuppliers, Permissions.Procurement.ManageSuppliers,
             Permissions.Procurement.ViewPurchaseOrders, Permissions.Procurement.CreatePurchaseOrders,
+            Permissions.Finance.ViewPayables,
         ],
 
         [RoleNames.SalesOfficer] =
@@ -101,6 +102,7 @@ public static class RolePermissionDefaults
             Permissions.Finance.RecordPayments, Permissions.Finance.ViewReports,
             Permissions.Procurement.ViewSuppliers, Permissions.Procurement.ViewPurchaseOrders,
             Permissions.Procurement.ApprovePurchaseOrders, Permissions.Reports.Organization,
+            Permissions.Finance.ViewPayables, Permissions.Finance.ManagePayables,
         ],
 
         [RoleNames.Auditor] =
@@ -111,6 +113,7 @@ public static class RolePermissionDefaults
             Permissions.Customers.View, Permissions.Procurement.ViewSuppliers,
             Permissions.Procurement.ViewPurchaseOrders, Permissions.Finance.ViewInvoices,
             Permissions.Finance.ViewReports, Permissions.Reports.Organization, Permissions.Audit.View,
+            Permissions.Finance.ViewPayables,
         ],
     };
 }

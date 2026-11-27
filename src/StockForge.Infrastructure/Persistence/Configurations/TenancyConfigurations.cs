@@ -31,6 +31,7 @@ internal sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
             s.Property(x => x.InvoiceDueDays).HasColumnName("settings_invoice_due_days");
             s.Property(x => x.StockAdjustmentRequiresApproval).HasColumnName("settings_adjustment_requires_approval");
             s.Property(x => x.LowStockAlertsEnabled).HasColumnName("settings_low_stock_alerts_enabled");
+            s.Property(x => x.PurchaseApprovalThreshold).HasColumnName("settings_purchase_approval_threshold").HasPrecision(18, 2);
         });
         b.Navigation(t => t.Settings).IsRequired();
     }

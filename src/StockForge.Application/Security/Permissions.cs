@@ -91,6 +91,8 @@ public static class Permissions
         public const string ManageInvoices = "invoices.manage";
         public const string RecordPayments = "payments.record";
         public const string ViewReports = "finance.reports";
+        public const string ViewPayables = "payables.view";
+        public const string ManagePayables = "payables.manage";
     }
 
     public static class Reports
