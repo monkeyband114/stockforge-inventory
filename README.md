@@ -8,7 +8,7 @@ application scoping, EF Core query filters, composite tenant foreign keys and Po
 security. Inventory cannot be oversold under concurrency: domain invariants, `xmin` optimistic
 concurrency with transactional retries, and database `CHECK` constraints all guard it.
 
-## What works today (phases 1 and 2)
+## What works today (phases 1–3)
 
 * **Identity & tenancy:** organization onboarding, JWT access tokens plus rotating refresh tokens with
   reuse detection, sessions and revocation, password reset, invitations, lockout, organization switching,
@@ -30,15 +30,16 @@ concurrency with transactional retries, and database `CHECK` constraints all gua
 * **Invoicing & finance:** gap-free invoice numbering, PDF invoices rendered by the worker (QuestPDF) and
   emailed to customers, payments, outstanding and overdue tracking (daily job), finance summary API, and
   order KPIs on the dashboard.
-* **Web app:** dashboards, inventory operations, products, warehouses, users and roles, organization
-  settings, audit, jobs, and platform administration, all wired to the API. Order, invoice and finance
-  screens are being added.
+* **Web app:** dashboards, inventory operations, products, warehouses, customers, orders and
+  fulfillment, invoices and finance, suppliers, purchase orders, receiving and payables, users and roles,
+  organization settings, audit, jobs, and platform administration, all wired to the API with live
+  SignalR updates.
 
-* **Procurement & payables (API):** suppliers with negotiated terms, purchase orders with an approval
+* **Procurement & payables:** suppliers with negotiated terms, purchase orders with an approval
   threshold, goods receipts with partial deliveries that book stock at purchase cost, supplier invoices with
   a three-way match, supplier payments, and reorder suggestions.
 
-Procurement screens and further finance analytics (phase 4) are planned in
+Further finance analytics and reporting (phase 4) are planned in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#9-implementation-roadmap).
 
 ## Quick start
