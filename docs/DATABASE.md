@@ -6,6 +6,7 @@ migrations in `src/StockForge.Infrastructure/Persistence/Migrations`:
 * `InitialSchema` is generated from the model.
 * `SecurityPolicies` is hand-written: runtime role, grants, append-only triggers, RLS and platform functions.
 * `SalesAndBilling` adds customers, orders, shipments, returns, invoices and payments, and ends with `stockforge_apply_tenant_rls()`.
+* `Procurement` adds suppliers, purchase orders, goods receipts and payables, plus the purchase-approval setting.
 
 ## Entity-relationship diagram
 
@@ -98,7 +99,7 @@ erDiagram
     }
 ```
 
-Procurement tables (phase 3: suppliers, purchase orders, goods receipts) will follow the same conventions.
+Procurement tables (`suppliers`, `supplier_products`, `purchase_orders`, `purchase_order_lines`, `goods_receipts`, `goods_receipt_lines`, `supplier_invoices`, `supplier_payments`) follow the same conventions; see the table reference below.
 
 ## Conventions
 
@@ -112,7 +113,7 @@ Procurement tables (phase 3: suppliers, purchase orders, goods receipts) will fo
 * **Concurrency.** `xmin` is the row version on tenants, memberships, warehouses, products, inventory items,
   reservations, adjustments and transfers. Update DTOs carry `version` for optimistic UI concurrency.
 * **Numbering.** `tenant_sequences (tenant_id, name, next_value)` is incremented with an atomic upsert inside
-  the business transaction. Formats: `SO-000001`, `INV-000001`, `SHP-000001`, `RMA-000001`, `CUS-00001`, `TRF-000001`, `ADJ-000001`, SKU `{CATEGORY}-000001`, internal EAN-13
+  the business transaction. Formats: `PO-000001`, `GRN-000001`, `SUP-00001`, `SINV-000001`, `SO-000001`, `INV-000001`, `SHP-000001`, `RMA-000001`, `CUS-00001`, `TRF-000001`, `ADJ-000001`, SKU `{CATEGORY}-000001`, internal EAN-13
   barcodes in the GS1 in-store range (prefix 2).
 
 ## Table reference
@@ -142,6 +143,10 @@ Procurement tables (phase 3: suppliers, purchase orders, goods receipts) will fo
 | `sales_returns`, `sales_return_lines` | Customer returns (restock flag, credit) | unique number |
 | `invoices`, `invoice_lines` | Invoices snapshotted from the order | partial unique `(tenant_id, sales_order_id)` (one per order); CHECK `paid + credited ≤ total`, `due ≥ issue` |
 | `payments` | Payments against invoices | `amount > 0` |
+| `suppliers`, `supplier_products` | Supplier profiles; negotiated cost, MOQ, lead time per product | unique `(tenant_id, code)`; one preferred supplier per product (partial unique) |
+| `purchase_orders`, `purchase_order_lines` | Purchase orders and received quantities | unique number and idempotency key; CHECK `quantity_received ≤ quantity` |
+| `goods_receipts`, `goods_receipt_lines` | Goods received notes (partial deliveries) | unique number; FK to the PO line |
+| `supplier_invoices`, `supplier_payments` | Accounts payable with three-way match flag | unique `(tenant_id, supplier_id, supplier_invoice_number)`; CHECK `paid ≤ total` |
 | `tenant_sequences` | Gap-free document numbering | PK `(tenant_id, name)` |
 | `idempotency_records` | Stored responses for idempotent retries (24 h) | unique `(tenant_id, key)` |
 | `stored_files`, `stored_file_contents` | Product images, generated documents | content FK `(tenant_id, file_id)` |

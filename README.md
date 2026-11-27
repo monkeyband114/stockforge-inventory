@@ -34,7 +34,11 @@ concurrency with transactional retries, and database `CHECK` constraints all gua
   settings, audit, jobs, and platform administration, all wired to the API. Order, invoice and finance
   screens are being added.
 
-Procurement (phase 3) and further finance analytics (phase 4) are planned in
+* **Procurement & payables (API):** suppliers with negotiated terms, purchase orders with an approval
+  threshold, goods receipts with partial deliveries that book stock at purchase cost, supplier invoices with
+  a three-way match, supplier payments, and reorder suggestions.
+
+Procurement screens and further finance analytics (phase 4) are planned in
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#9-implementation-roadmap).
 
 ## Quick start
@@ -91,6 +95,7 @@ The suite has 89 tests, covering among other things:
 | [Authentication](docs/AUTHENTICATION.md) | Token model, sign-in, refresh rotation, sessions, RBAC |
 | [Inventory](docs/INVENTORY.md) | Ledger, concurrency guarantees, workflows |
 | [Orders](docs/ORDERS.md) | Order lifecycle, transactional approval, fulfillment, invoicing |
+| [Procurement](docs/PROCUREMENT.md) | Suppliers, purchase orders, goods receipts, payables |
 | [Database](docs/DATABASE.md) | ERD, conventions, table reference, roles |
 | [API](docs/API.md) | Conventions, errors, idempotency, endpoints, realtime events |
 | [Deployment](docs/DEPLOYMENT.md) | Docker, scaling, environment variables, local setup, production checklist |

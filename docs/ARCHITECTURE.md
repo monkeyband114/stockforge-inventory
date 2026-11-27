@@ -10,6 +10,7 @@ implementation roadmap. Companion documents:
 | [AUTHENTICATION.md](AUTHENTICATION.md) | Login, refresh-token rotation, sessions, RBAC and permissions |
 | [INVENTORY.md](INVENTORY.md) | Stock ledger, concurrency control and the stock operations |
 | [ORDERS.md](ORDERS.md) | Order lifecycle, transactional approval, fulfillment, invoicing (sequence diagrams) |
+| [PROCUREMENT.md](PROCUREMENT.md) | Suppliers, purchase orders, goods receipts, accounts payable |
 | [DATABASE.md](DATABASE.md) | Full ERD and table reference |
 | [API.md](API.md) | Endpoint catalogue (Swagger UI is the live reference) |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Docker, environment variables and local development |
@@ -352,6 +353,6 @@ Each phase ends with: build, migration, tests, API verification and a documentat
 | **0. Foundation** | Solution, central packages, Docker Compose (PostgreSQL, Redis, Mailpit), CI, Serilog, problem details, OpenAPI, health checks | ✅ done |
 | **1. Identity, tenancy & inventory** | Identity + JWT + refresh rotation + sessions + password reset + lockout; organization onboarding; users/roles/permissions/warehouse assignment; platform admin; four-layer tenant isolation; warehouses, categories, units, products (SKU generation, barcodes, images); inventory balances, stock in/out, damaged, returned, reservations, adjustments with approval, transfers, valuation, movement history; audit log; outbox + worker skeleton; SignalR hub; frontend shell and these modules; isolation, concurrency and auth tests | ✅ done |
 | **2. Orders, fulfillment & invoicing** | Customers; sales orders with discounts/taxes; configurable approval thresholds; transactional approve → reserve → invoice; pick/pack/ship; partial fulfillment; returns; idempotency keys; invoice numbering; PDF generation in the worker; order emails; payments, overdue tracking and finance summary API | ✅ backend done · UI in progress |
-| 3. Procurement | Suppliers, supplier products, purchase orders + approval, goods receipt notes with partial deliveries → stock in, supplier invoices and payments | planned |
+| 3. Procurement | Suppliers, supplier products, purchase orders + approval, goods receipt notes with partial deliveries → stock in, supplier invoices with three-way match and payments, reorder suggestions | ✅ backend done · UI next |
 | 4. Finance & analytics | Credit notes and refunds, exportable and scheduled reports, revenue analytics by customer/product (payments, overdue tracking and the finance summary shipped with phase 2) | next |
 | 5. Hardening | Load tests, Hangfire adapter (optional), S3 file storage adapter, OpenTelemetry traces, backup/restore runbook | planned |

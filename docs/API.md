@@ -124,6 +124,24 @@ Stock operations are also limited to the caller's assigned warehouses unless the
 ⟳! = `Idempotency-Key` **required** (`400 idempotency_key_required` without it). Lifecycle rules and error
 codes are in [ORDERS.md](ORDERS.md).
 
+### Procurement & payables
+| Method | Path | Permission |
+|---|---|---|
+| GET / POST / PUT | `/api/suppliers`, `/api/suppliers/{id}` | suppliers.view / suppliers.manage |
+| GET / PUT / DELETE | `/api/suppliers/{id}/products`, `/products/{productId}` | suppliers.view / suppliers.manage |
+| GET | `/api/purchase-orders` (`status`, `supplierId`, `warehouseId`, `outstandingOnly`), `/{id}` | purchasing.view |
+| GET | `/api/purchase-orders/suggestions?warehouseId=` | purchasing.create |
+| POST ⟳! | `/api/purchase-orders` · `/{id}/submit` | purchasing.create |
+| PUT · POST | `/api/purchase-orders/{id}` · `/{id}/cancel` | purchasing.create |
+| POST ⟳! | `/api/purchase-orders/{id}/approve` · POST `/reject` | purchasing.approve |
+| POST | `/api/purchase-orders/{id}/close` (close short) | purchasing.create \| purchasing.approve |
+| POST ⟳! | `/api/purchase-orders/{id}/receipts` (goods received note) | purchasing.receive (+ warehouse access) |
+| GET | `/api/supplier-invoices` (`status`, `supplierId`, `outstandingOnly`), `/{id}` | payables.view |
+| POST ⟳! | `/api/supplier-invoices` · `/{id}/payments` | payables.manage |
+| POST | `/api/supplier-invoices/{id}/cancel` | payables.manage |
+
+See [PROCUREMENT.md](PROCUREMENT.md).
+
 ### Dashboards, audit, jobs, platform
 | Method | Path | Permission |
 |---|---|---|
